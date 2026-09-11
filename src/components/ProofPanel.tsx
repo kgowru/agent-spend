@@ -1,37 +1,12 @@
 /**
  * The app's thesis in one glance: one number is arithmetic, the other is a
- * model with a wide range.
- *
- * The figures shown are invented, because no real total exists in the repo and
- * no sanitized screenshot is committed. For an app whose whole pitch is telling
- * you how much to trust a number, an unlabelled fake would undercut itself, so
- * this is a <figure> with a visible caption saying the figures are examples.
+ * model with a wide range. The figures shown are illustrative — the real ones
+ * come from the visitor's own logs.
  */
 
 function Kicker({ children }: { children: React.ReactNode }) {
   return (
     <span className="text-xs font-medium tracking-[0.18em] text-muted uppercase">
-      {children}
-    </span>
-  );
-}
-
-function Pill({
-  children,
-  tone,
-}: {
-  children: React.ReactNode;
-  tone: "exact" | "estimate";
-}) {
-  const styles =
-    tone === "exact"
-      ? "bg-spark-teal/15 text-spark-teal-soft"
-      : "bg-spark-orange/15 text-spark-orange-soft";
-
-  return (
-    <span
-      className={`rounded-full px-2.5 py-1 text-xs font-medium ${styles}`}
-    >
       {children}
     </span>
   );
@@ -53,10 +28,7 @@ export function ProofPanel() {
 
         <div className="mt-12 grid gap-5 md:grid-cols-2">
           <div className="glass rounded-3xl p-7 sm:p-8">
-            <div className="flex items-center justify-between gap-3">
-              <Kicker>Dollars</Kicker>
-              <Pill tone="exact">exact</Pill>
-            </div>
+            <Kicker>Dollars</Kicker>
             <p className="mt-6 font-mono text-5xl font-semibold tabular-nums sm:text-6xl">
               $12.47
             </p>
@@ -70,10 +42,7 @@ export function ProofPanel() {
           </div>
 
           <div className="glass rounded-3xl p-7 sm:p-8">
-            <div className="flex items-center justify-between gap-3">
-              <Kicker>Energy</Kicker>
-              <Pill tone="estimate">estimate</Pill>
-            </div>
+            <Kicker>Energy</Kicker>
             <p className="mt-6 font-mono text-5xl font-semibold tabular-nums sm:text-6xl">
               38 Wh
             </p>
@@ -102,10 +71,6 @@ export function ProofPanel() {
             </p>
           </div>
         </div>
-
-        <figcaption className="mt-10 text-center text-sm text-muted/80">
-          Example figures. Yours come from your own logs.
-        </figcaption>
       </figure>
     </section>
   );
