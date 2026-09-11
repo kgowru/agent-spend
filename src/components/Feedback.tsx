@@ -125,7 +125,10 @@ export function Feedback() {
           }`}
         >
           <div className="overflow-hidden">
-            <div className="px-8 pb-8 sm:px-10 sm:pb-10">
+            {/* Top padding lives inside the clipped panel so the form reveals
+             * with clear space below the header instead of the textarea (and
+             * its outward focus ring) butting straight up against it. */}
+            <div className="px-8 pt-6 pb-8 sm:px-10 sm:pt-8 sm:pb-10">
               {status === "sent" ? (
                 <p
                   role="status"
