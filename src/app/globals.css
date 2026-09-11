@@ -1,26 +1,265 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Brand colors live in a plain `@theme` block, not `@theme inline`, because the
+ * glow layers below reference them as `var(--color-spark-*)` from handwritten
+ * CSS. `@theme inline` substitutes values into utilities instead of emitting
+ * the custom properties, so those references would resolve to nothing.
+ *
+ * Spark hexes come from mac/assets/dmg-preview.html:209, matching the three
+ * bolts in the app icon. The channel triples repeat those hexes in a form the
+ * glow gradients can interpolate per channel.
+ */
+@theme {
+  --color-canvas: #07090b;
+  --color-canvas-raised: #0c1013;
+  --color-ink: #e9efec;
+  --color-muted: #8f9d98;
+
+  --color-spark-teal: #04aa82;
+  --color-spark-blue: #1942cd;
+  --color-spark-orange: #f33700;
+
+  /* Lightened for text and icons. The raw hexes sit near 2:1 on the canvas and
+     must never carry type. */
+  --color-spark-teal-soft: #3fd8b0;
+  --color-spark-blue-soft: #7c9bff;
+  --color-spark-orange-soft: #ff8a5c;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+ * Both glow animations touch `transform` and `opacity` only, which the
+ * compositor handles without repainting. Animating `filter` or a gradient stop
+ * would re-rasterize the whole layer every frame.
+ */
+
+/* The whole triad orbits the icon once per cycle. */
+@keyframes glow-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Each blob breathes on its own clock, so the triad never pulses in unison. */
+@keyframes glow-pulse-a {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.16);
+    opacity: 1;
+  }
+}
+
+@keyframes glow-pulse-b {
+  0%,
+  100% {
+    transform: scale(1.12);
+    opacity: 0.95;
+  }
+  50% {
+    transform: scale(0.9);
+    opacity: 0.66;
+  }
+}
+
+@keyframes glow-pulse-c {
+  0%,
+  100% {
+    transform: scale(1.02);
+    opacity: 0.78;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    /*
+     * No `font-family` here. The scaffold hardcoded Arial, which silently
+     * overrode the Geist fonts loaded in layout.tsx. The font now comes from
+     * the `font-sans` class on <body>.
+     */
+    overflow-x: hidden;
+  }
+
+  /* Native <details> marker, replaced by an explicit chevron in Faq.tsx. */
+  summary {
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+@layer components {
+  .glass {
+    background: rgb(255 255 255 / 0.055);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgb(255 255 255 / 0.09);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.14),
+      0 30px 80px -30px rgb(0 0 0 / 0.85);
+  }
+
+  /*
+   * Large soft radial gradients band visibly on 8-bit displays. Grain is the
+   * standard fix, and it costs one composited layer.
+   */
+  .noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /*
+   * The rotating triad. A zero-sized point at the icon's centre; the blobs hang
+   * off it, so rotating this one element orbits all three together.
+   */
+  .glow-orbit {
+    position: absolute;
+    top: 23%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    --glow-size: 19rem;
+    animation: glow-orbit 80s linear infinite;
+  }
+
+  @media (min-width: 640px) {
+    .glow-orbit {
+      --glow-size: 26rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .glow-orbit {
+      --glow-size: 33rem;
+    }
+  }
+
+  /*
+   * No `filter: blur()` anywhere in here, deliberately. The softness comes from
+   * the gradient's own falloff, which means nothing re-rasterizes as the blobs
+   * scale and orbit.
+   *
+   * Two details kill the visible circular seam that a naive
+   * `COLOR -> transparent` ramp produces:
+   *
+   * 1. The final stop is the SAME hue at zero alpha, not the keyword
+   *    `transparent`. `transparent` is rgba(0,0,0,0), so interpolating to it
+   *    drags the ramp through grey and leaves a dirty ring.
+   * 2. Nine stops on a roughly gaussian alpha curve, rather than two. A linear
+   *    two-stop ramp terminates with a discontinuity in its first derivative,
+   *    and the eye reads that as a hard edge even though the alpha is 0 there.
+   */
+  .glow-blob {
+    position: absolute;
+    width: var(--glow-size);
+    height: var(--glow-size);
+    margin-top: calc(var(--glow-size) / -2);
+    margin-left: calc(var(--glow-size) / -2);
+    border-radius: 9999px;
+    mix-blend-mode: screen;
+    will-change: transform, opacity;
+    background: radial-gradient(
+      circle closest-side,
+      rgb(var(--glow-rgb) / 0.34) 0%,
+      rgb(var(--glow-rgb) / 0.312) 12%,
+      rgb(var(--glow-rgb) / 0.258) 24%,
+      rgb(var(--glow-rgb) / 0.195) 36%,
+      rgb(var(--glow-rgb) / 0.135) 48%,
+      rgb(var(--glow-rgb) / 0.084) 60%,
+      rgb(var(--glow-rgb) / 0.044) 72%,
+      rgb(var(--glow-rgb) / 0.015) 85%,
+      rgb(var(--glow-rgb) / 0) 100%
+    );
+  }
+
+  /*
+   * Three points 120 degrees apart at 0.3 of the blob width from centre. That
+   * radius is well inside each blob's own radius, so the three overlap heavily
+   * and read as one continuous field rather than three circles.
+   */
+  .glow-blob-teal {
+    --glow-rgb: 4 170 130;
+    top: calc(var(--glow-size) * 0.15);
+    left: calc(var(--glow-size) * -0.26);
+    animation: glow-pulse-a 13s ease-in-out infinite;
+  }
+
+  .glow-blob-blue {
+    --glow-rgb: 25 66 205;
+    top: calc(var(--glow-size) * -0.3);
+    left: 0;
+    animation: glow-pulse-b 19s ease-in-out infinite -7s;
+  }
+
+  .glow-blob-orange {
+    --glow-rgb: 243 55 0;
+    top: calc(var(--glow-size) * 0.15);
+    left: calc(var(--glow-size) * 0.26);
+    animation: glow-pulse-c 16s ease-in-out infinite -4s;
+  }
+
+  /* Static ambient lift under the triad, same smooth falloff. */
+  .glow-wash {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      36% 32% at 50% 23%,
+      rgb(25 66 205 / 0.17) 0%,
+      rgb(25 66 205 / 0.132) 22%,
+      rgb(25 66 205 / 0.086) 44%,
+      rgb(25 66 205 / 0.046) 62%,
+      rgb(25 66 205 / 0.018) 78%,
+      rgb(25 66 205 / 0.004) 91%,
+      rgb(25 66 205 / 0) 100%
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-orbit,
+  .glow-blob {
+    animation: none;
+  }
+}
+
+/*
+ * MetalFx assumes it owns the whole button surface: its root paints an opaque
+ * #272727 fill plus two inset rings. Here it only supplies the shimmer on hover
+ * over an outline button that draws its own edge, so the surface is stripped
+ * back to transparent and the ring is left to `.btn-metal`.
+ *
+ * Deliberately outside `@layer components`. metal-fx injects its stylesheet
+ * into <head> at runtime as unlayered CSS, and unlayered declarations beat
+ * layered ones whatever the specificity, so an override inside a layer would
+ * never take.
+ */
+.btn-metal .metal-fx-root {
+  background: transparent;
+}
+
+.btn-metal .metal-fx-root::before,
+.btn-metal .metal-fx-root::after {
+  box-shadow: none;
 }
