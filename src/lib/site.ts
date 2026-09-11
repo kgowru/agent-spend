@@ -56,7 +56,7 @@ export const FAQ = [
   },
   {
     q: "I'm on a Pro or Max subscription. Will the dollars match my bill?",
-    a: "No, and the app says so. The figure is what your usage would cost at Anthropic's published API rates. On a subscription it is a comparison number, not your invoice.",
+    a: "The figure is what your usage would cost at Anthropic's published API rates. On a subscription it is a comparison number, not your invoice.",
   },
   {
     q: "Does it work on Intel Macs?",
