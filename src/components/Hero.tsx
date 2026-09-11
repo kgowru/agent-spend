@@ -93,14 +93,6 @@ export function Hero() {
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <MetalButton className="w-full sm:w-auto">
-            <a
-              href={DOWNLOAD_URL}
-              className="w-full rounded-full px-7 py-3.5 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft sm:w-auto"
-            >
-              Download for macOS
-            </a>
-          </MetalButton>
           <a
             href={BLOG_URL}
             target="_blank"
@@ -123,12 +115,17 @@ export function Hero() {
               />
             </svg>
           </a>
+          <MetalButton className="w-full sm:w-auto" introOnMount>
+            <a
+              href={DOWNLOAD_URL}
+              className="w-full rounded-full px-7 py-3.5 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft sm:w-auto"
+            >
+              Download for macOS
+            </a>
+          </MetalButton>
         </div>
 
-        <p className="mt-6 text-sm text-muted">
-          Free and MIT licensed. Signed and notarized by Apple. Universal
-          binary, about 3 MB.
-        </p>
+        <p className="mt-6 text-sm text-muted">Free and MIT licensed.</p>
       </div>
     </section>
   );

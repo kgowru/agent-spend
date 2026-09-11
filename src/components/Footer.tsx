@@ -14,8 +14,7 @@ export function Footer() {
         <div className="max-w-md">
           <p className="text-sm text-muted">MIT, 2026 Kapil Gowru.</p>
           <p className="mt-3 text-sm/6 text-muted">
-            Not affiliated with Anthropic. AgentSpend reads logs that Claude
-            Code writes to your system.
+            Not affiliated with Anthropic.
           </p>
         </div>
 

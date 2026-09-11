@@ -113,12 +113,25 @@ function useShimmer() {
   return { strength, show, hide };
 }
 
+/* How long the intro shimmer holds at full strength before fading, ms. Long
+ * enough to register as deliberate, short enough not to feel like a stuck
+ * hover state. */
+const INTRO_HOLD_MS = 700;
+/* Give layout/paint a beat to settle before the shader starts, so the intro
+ * doesn't compete with the page's own entrance. */
+const INTRO_DELAY_MS = 300;
+
 export function MetalButton({
   children,
   className = "",
+  introOnMount = false,
 }: {
   children: ReactNode;
   className?: string;
+  /** Play the shimmer once on mount, then fade it out, before handing off to
+   *  normal hover/focus behavior. For the one primary CTA that should draw
+   *  the eye on page load. */
+  introOnMount?: boolean;
 }) {
   const isClient = useIsClient();
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -128,13 +141,35 @@ export function MetalButton({
    * of, so reduced motion keeps the plain outline button. */
   const shimmer = isClient && !prefersReducedMotion;
 
+  useEffect(() => {
+    if (!shimmer || !introOnMount) return;
+
+    const showTimer = window.setTimeout(show, INTRO_DELAY_MS);
+    const hideTimer = window.setTimeout(
+      hide,
+      INTRO_DELAY_MS + FADE_IN_MS + INTRO_HOLD_MS,
+    );
+
+    return () => {
+      window.clearTimeout(showTimer);
+      window.clearTimeout(hideTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shimmer, introOnMount]);
+
   return (
     <span
       /* The outline lives out here rather than on the child: MetalFx normalizes
        * the wrapped element's border, background and shadow away so consumer
        * styles can't fight its ring. Keeping the shell mounted on the server
-       * too means hydration doesn't shift the button's geometry. */
-      className={`btn-metal relative inline-flex rounded-full border transition-colors duration-300 ease-out hover:bg-white/5 ${className}`}
+       * too means hydration doesn't shift the button's geometry.
+       *
+       * Only background-color is a CSS transition here — border-color is
+       * already animated every frame via `strength`'s easing below, and
+       * layering a second (CSS) tween on top of a first (JS) one makes the
+       * ring perpetually chase a moving target instead of settling, which
+       * reads as laggy/glitchy rather than smooth. */
+      className={`btn-metal relative inline-flex rounded-full border transition-[background-color] duration-300 ease-out hover:bg-white/5 ${className}`}
       style={{
         borderColor: `rgb(233 239 236 / ${EDGE_REST - EDGE_HANDOFF * strength})`,
       }}
