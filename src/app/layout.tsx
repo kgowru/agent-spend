@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { SITE_URL, TAGLINE } from "@/lib/site";
 import "./globals.css";
 
@@ -69,6 +70,7 @@ export default function RootLayout({
           aria-hidden="true"
           className="noise pointer-events-none fixed inset-0 z-50 opacity-[0.035] mix-blend-soft-light"
         />
+        <Analytics />
       </body>
     </html>
   );

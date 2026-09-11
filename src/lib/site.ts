@@ -10,8 +10,8 @@ export const DOWNLOAD_URL = `${REPO_URL}/releases/latest`;
 export const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
 export const BLOG_URL = "https://kapilgowru.xyz/blog/agent-spend";
 
-/** Set this to a Buy Me a Coffee or Ko-fi URL to reveal the support section. */
-export const DONATE_URL = "";
+/** Buy Me a Coffee link, surfaced as a discreet icon in the footer. */
+export const DONATE_URL = "https://buymeacoffee.com/kapskaps";
 
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";

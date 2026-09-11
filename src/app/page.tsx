@@ -4,7 +4,7 @@ import { ProofPanel } from "@/components/ProofPanel";
 import { Download } from "@/components/Download";
 import { Trust } from "@/components/Trust";
 import { Faq } from "@/components/Faq";
-import { Support } from "@/components/Support";
+import { Feedback } from "@/components/Feedback";
 import { Footer } from "@/components/Footer";
 
 export default function Home() {
@@ -17,7 +17,7 @@ export default function Home() {
         <Download />
         <Trust />
         <Faq />
-        <Support />
+        <Feedback />
       </main>
       <Footer />
     </>
