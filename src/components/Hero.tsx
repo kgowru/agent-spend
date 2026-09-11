@@ -115,7 +115,7 @@ export function Hero() {
               />
             </svg>
           </a>
-          <MetalButton className="w-full sm:w-auto" introOnMount>
+          <MetalButton className="w-full sm:w-auto" alwaysOn>
             <a
               href={DOWNLOAD_URL}
               className="w-full rounded-full px-7 py-3.5 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft sm:w-auto"

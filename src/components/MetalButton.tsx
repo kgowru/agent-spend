@@ -11,8 +11,10 @@ import {
 import { MetalFx } from "metal-fx";
 
 /*
- * The primary call to action: a white outline button at rest, with the liquid
- * metal shimmer easing in under the cursor.
+ * The primary call to action: a white outline button with the liquid metal
+ * shimmer. By default the shimmer eases in under the cursor; pass `alwaysOn`
+ * and it stays lit continuously (for the one hero CTA that should always
+ * shimmer).
  *
  * The shimmer is driven by MetalFx's `strength` prop rather than a CSS opacity
  * on the canvas, because `strength` scales the shader bitmap and the glow alpha
@@ -20,8 +22,8 @@ import { MetalFx } from "metal-fx";
  * different rates and the halo would visibly outlive the ring.
  *
  * While `strength` is 0 the instance is also `paused`, so an idle page runs no
- * WebGL frames at all. Three always-on instances is what made the first pass
- * feel sluggish.
+ * WebGL frames at all. Keep `alwaysOn` to a single button — several instances
+ * running their shader every frame is what made the first pass feel sluggish.
  */
 
 /* Arriving should feel responsive; leaving should read as metal cooling rather
@@ -113,25 +115,17 @@ function useShimmer() {
   return { strength, show, hide };
 }
 
-/* How long the intro shimmer holds at full strength before fading, ms. Long
- * enough to register as deliberate, short enough not to feel like a stuck
- * hover state. */
-const INTRO_HOLD_MS = 700;
-/* Give layout/paint a beat to settle before the shader starts, so the intro
- * doesn't compete with the page's own entrance. */
-const INTRO_DELAY_MS = 300;
-
 export function MetalButton({
   children,
   className = "",
-  introOnMount = false,
+  alwaysOn = false,
 }: {
   children: ReactNode;
   className?: string;
-  /** Play the shimmer once on mount, then fade it out, before handing off to
-   *  normal hover/focus behavior. For the one primary CTA that should draw
-   *  the eye on page load. */
-  introOnMount?: boolean;
+  /** Keep the shimmer lit continuously instead of only on hover/focus. For the
+   *  one primary CTA that should always draw the eye. Reserve for a single
+   *  button — every always-on instance runs its shader every frame. */
+  alwaysOn?: boolean;
 }) {
   const isClient = useIsClient();
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -140,22 +134,14 @@ export function MetalButton({
   /* A wandering shader under the cursor is exactly what this asks to opt out
    * of, so reduced motion keeps the plain outline button. */
   const shimmer = isClient && !prefersReducedMotion;
+  const litAlways = shimmer && alwaysOn;
 
+  /* Always-on: ease the shimmer up once on mount and leave it there. The ramp
+   * (rather than starting at full) keeps it from popping in as the page paints. */
   useEffect(() => {
-    if (!shimmer || !introOnMount) return;
-
-    const showTimer = window.setTimeout(show, INTRO_DELAY_MS);
-    const hideTimer = window.setTimeout(
-      hide,
-      INTRO_DELAY_MS + FADE_IN_MS + INTRO_HOLD_MS,
-    );
-
-    return () => {
-      window.clearTimeout(showTimer);
-      window.clearTimeout(hideTimer);
-    };
+    if (litAlways) show();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shimmer, introOnMount]);
+  }, [litAlways]);
 
   return (
     <span
@@ -173,10 +159,12 @@ export function MetalButton({
       style={{
         borderColor: `rgb(233 239 236 / ${EDGE_REST - EDGE_HANDOFF * strength})`,
       }}
-      onPointerEnter={shimmer ? show : undefined}
-      onPointerLeave={shimmer ? hide : undefined}
-      onFocus={shimmer ? show : undefined}
-      onBlur={shimmer ? hide : undefined}
+      /* When always-on the ring is already lit, so hover/focus do nothing and,
+       * crucially, leaving/blurring must not fade it back out. */
+      onPointerEnter={shimmer && !alwaysOn ? show : undefined}
+      onPointerLeave={shimmer && !alwaysOn ? hide : undefined}
+      onFocus={shimmer && !alwaysOn ? show : undefined}
+      onBlur={shimmer && !alwaysOn ? hide : undefined}
     >
       {shimmer ? (
         <MetalFx
