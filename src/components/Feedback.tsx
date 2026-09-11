@@ -83,7 +83,7 @@ export function Feedback() {
             role="status"
             className="mt-8 rounded-2xl border border-spark-teal/25 bg-spark-teal/10 px-4 py-3 text-sm text-spark-teal-soft"
           >
-            Thanks — your feedback is on its way. I read every note.
+            Thanks, your feedback is on its way. I read every note.
           </p>
         ) : (
           <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-4" noValidate>
