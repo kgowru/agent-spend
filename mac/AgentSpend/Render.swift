@@ -9,9 +9,17 @@ import SwiftUI
 /// file. Reads from the store populated by a prior run, so it needs no ingest.
 @MainActor
 enum Render {
+    /// `AGENTSPEND_RENDER_DARK=1` renders the panes in dark appearance, for
+    /// marketing captures on a dark page. Off by default so the verification
+    /// output stays byte-comparable with previous runs.
+    static var dark: Bool {
+        ProcessInfo.processInfo.environment["AGENTSPEND_RENDER_DARK"] == "1"
+    }
+
     static func run(to dir: String) -> Int32 {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.accessory)
+        if dark { NSApp.appearance = NSAppearance(named: .darkAqua) }
 
         do {
             let out = URL(fileURLWithPath: (dir as NSString).expandingTildeInPath)
@@ -124,7 +132,12 @@ enum Render {
         let base = width.map { view.frame(width: $0, alignment: .topLeading).padding(12)
             .background(Color(nsColor: .windowBackgroundColor)).eraseToAny() }
             ?? view.background(Color(nsColor: .windowBackgroundColor)).eraseToAny()
-        let renderer = ImageRenderer(content: base)
+        // ImageRenderer resolves colours from the SwiftUI environment, not from
+        // NSApp.appearance, so the scheme has to be set on the content too.
+        let themed = dark
+            ? base.environment(\.colorScheme, .dark).eraseToAny()
+            : base
+        let renderer = ImageRenderer(content: themed)
         renderer.scale = 2
         guard let image = renderer.nsImage,
               let tiff = image.tiffRepresentation,

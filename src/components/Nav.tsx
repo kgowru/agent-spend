@@ -26,6 +26,12 @@ export function Nav() {
 
         <div className="flex items-center gap-1 sm:gap-2">
           <a
+            href="#showcase"
+            className="hidden rounded-full px-3.5 py-2 text-sm text-muted transition hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft sm:block"
+          >
+            Screens
+          </a>
+          <a
             href="#install"
             className="hidden rounded-full px-3.5 py-2 text-sm text-muted transition hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft sm:block"
           >
