@@ -33,7 +33,11 @@ def check(label, ok, detail=""):
 
 def main():
     energy, pricing, tiers, prices = load_resources()
+    # Keyed by provider since schemaVersion 2. This script only walks Claude
+    # Code logs, so the hand-computed spot-check below uses Anthropic's terms;
+    # cost_usd itself still gets the whole table and picks per row.
     mult = pricing["cacheMultipliers"]
+    claude_mult = mult["claude"]
 
     # Raw scan, independent of prototype.parse
     payloads = defaultdict(set)      # message.id -> set of usage fingerprints
@@ -123,10 +127,10 @@ def main():
     row = max(a, key=lambda r: r["output"])
     p = prices[row["model"]]
     w5, w1h = row["cacheWrite5m"], row["cacheWrite1h"]
-    write = (w5 * mult["write5m"] + w1h * mult["write1h"]) if (w5 + w1h) else \
-        row["cacheWrite"] * mult["write5m"]
+    write = (w5 * claude_mult["write5m"] + w1h * claude_mult["write1h"]) if (w5 + w1h) else \
+        row["cacheWrite"] * claude_mult["write5m"]
     hand = (row["input"] * p["input"] + write * p["input"]
-            + row["cacheRead"] * p["input"] * mult["read"]
+            + row["cacheRead"] * p["input"] * claude_mult["read"]
             + row["output"] * p["output"]) / 1_000_000.0
     got = cost_usd(row, prices, mult)
     check("hand-computed cost matches cost_usd", abs(hand - got) < 1e-12,

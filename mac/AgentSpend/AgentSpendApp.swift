@@ -14,6 +14,15 @@ enum Main {
                 : JSONLIngestor.defaultRoot()
             exit(CLI.runVerify(root: root))
         }
+        // The Codex equivalent. Separate flag rather than sniffing the tree,
+        // because picking the wrong parser fails silently — neither format
+        // errors on the other's lines, it just finds no usage in them.
+        if let i = args.firstIndex(of: "--verify-codex") {
+            let root = args.count > i + 1 && !args[i + 1].hasPrefix("--")
+                ? URL(fileURLWithPath: (args[i + 1] as NSString).expandingTildeInPath)
+                : CodexIngestor.defaultRoot()
+            exit(CLI.runVerify(root: root, provider: .codex))
+        }
         // Renders the same view hierarchy in an ordinary window. A menu bar
         // popover can't be opened programmatically without accessibility
         // permission, which makes this the practical way to eyeball the UI.
@@ -67,7 +76,9 @@ final class EngineBox: ObservableObject {
 
     init() {
         do {
-            let e = try UsageEngine()
+            // The live app reads every agent CLI it finds; the single-root
+            // initializer stays for the headless verification paths.
+            let e = try UsageEngine(sources: LogSource.all())
             value = e
             Task {
                 await e.refresh()

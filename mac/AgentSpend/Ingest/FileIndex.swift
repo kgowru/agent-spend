@@ -15,6 +15,40 @@ struct FileIndex: Codable, Sendable {
         /// Bytes after the last newline in the previous read — a file being
         /// appended to can be read mid-line.
         var tail: Data
+        /// Parser state carried between passes.
+        ///
+        /// Claude logs repeat everything on every usage row, so its parser
+        /// needs none of this. Codex does not: the model and cwd arrive once in
+        /// a `turn_context` event and every later `token_count` row depends on
+        /// having seen it. Since a resumed pass starts at a byte offset well
+        /// past that event, the state has to survive alongside the offset or
+        /// every record after the first restart would be unattributable.
+        var context: [String: String] = [:]
+
+        init(inode: UInt64, size: UInt64, offset: UInt64, mtime: Double,
+             tail: Data, context: [String: String] = [:]) {
+            self.inode = inode
+            self.size = size
+            self.offset = offset
+            self.mtime = mtime
+            self.tail = tail
+            self.context = context
+        }
+
+        /// Hand-written so that an index file written before `context` existed
+        /// still decodes. Swift's synthesized `init(from:)` ignores property
+        /// defaults and throws on a missing key, which would fail the whole
+        /// index and silently downgrade the next launch into a full cold
+        /// re-read of the entire corpus.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            inode = try c.decode(UInt64.self, forKey: .inode)
+            size = try c.decode(UInt64.self, forKey: .size)
+            offset = try c.decode(UInt64.self, forKey: .offset)
+            mtime = try c.decode(Double.self, forKey: .mtime)
+            tail = try c.decodeIfPresent(Data.self, forKey: .tail) ?? Data()
+            context = try c.decodeIfPresent([String: String].self, forKey: .context) ?? [:]
+        }
     }
 
     private(set) var entries: [String: Entry] = [:]
@@ -49,11 +83,16 @@ struct FileIndex: Codable, Sendable {
 
     func pendingTail(for url: URL) -> Data { entries[url.path]?.tail ?? Data() }
 
-    mutating func record(url: URL, offset: UInt64, size: UInt64, inode: UInt64, tail: Data) {
+    /// Sticky parser state from the previous pass. Empty after a rotation,
+    /// which is correct — a replaced file is reparsed from zero.
+    func pendingContext(for url: URL) -> [String: String] { entries[url.path]?.context ?? [:] }
+
+    mutating func record(url: URL, offset: UInt64, size: UInt64, inode: UInt64,
+                         tail: Data, context: [String: String] = [:]) {
         let mtime = (try? FileManager.default.attributesOfItem(atPath: url.path))
             .flatMap { ($0[.modificationDate] as? Date)?.timeIntervalSince1970 } ?? 0
         entries[url.path] = Entry(inode: inode, size: size, offset: offset,
-                                  mtime: mtime, tail: tail)
+                                  mtime: mtime, tail: tail, context: context)
     }
 
     // MARK: - Persistence

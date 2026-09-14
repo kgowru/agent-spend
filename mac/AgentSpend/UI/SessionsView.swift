@@ -95,9 +95,7 @@ struct SessionRow: View {
         }
     }
 
-    private func short(_ m: String) -> String {
-        m.replacingOccurrences(of: "claude-", with: "")
-    }
+    private func short(_ m: String) -> String { Format.model(m) }
 }
 
 /// When today's work happened. Hovering an hour reads out that hour's spend.

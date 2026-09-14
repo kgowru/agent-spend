@@ -16,7 +16,8 @@ enum Render {
         do {
             let out = URL(fileURLWithPath: (dir as NSString).expandingTildeInPath)
             try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
-            let engine = try UsageEngine()
+            // Detected sources, so a render shows what the shipped app shows.
+            let engine = try UsageEngine(sources: LogSource.all())
 
             if engine.records.isEmpty {
                 print("store is empty — run the app once so it can ingest, then retry")

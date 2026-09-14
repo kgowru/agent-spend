@@ -166,19 +166,29 @@ def energy_wh(row, energy, tiers, bound="v", read_factor=None):
 
 
 def cost_usd(row, prices, mult):
+    """USD for one row.
+
+    `mult` is keyed by provider: the vendors' cache terms differ (OpenAI bills
+    nothing to write a cache entry before GPT-5.6; Anthropic charges up to 2x),
+    and a model may override its vendor's default where that vendor is not
+    internally consistent. This mirrors Estimator.cost in the Swift app.
+    """
     p = prices.get(row["model"])
     if p is None:
+        return None
+    m = p.get("cache") or mult.get(row.get("provider", "claude"))
+    if m is None:
         return None
     # Split the write by TTL when the breakdown is present; the 1h premium is
     # 2x vs 1.25x, which is a real difference in Claude Code's usage pattern.
     w5, w1h = row["cacheWrite5m"], row["cacheWrite1h"]
     if w5 + w1h == 0:
-        write = row["cacheWrite"] * mult["write5m"]
+        write = row["cacheWrite"] * m["write5m"]
     else:
-        write = w5 * mult["write5m"] + w1h * mult["write1h"]
+        write = w5 * m["write5m"] + w1h * m["write1h"]
     return (row["input"] * p["input"]
             + write * p["input"]
-            + row["cacheRead"] * p["input"] * mult["read"]
+            + row["cacheRead"] * p["input"] * m["read"]
             + row["output"] * p["output"]) / 1_000_000.0
 
 

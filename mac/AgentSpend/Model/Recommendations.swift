@@ -34,6 +34,18 @@ enum Recommender {
         "claude-opus-5": "claude-opus-4-8",
     ]
 
+    /// The mid-tier model to suggest dropping to, within a provider.
+    ///
+    /// Per-provider because the advice is "change your default in this tool",
+    /// and a substitution only makes sense inside the tool you are already
+    /// running. Suggesting a Claude model to someone spending in Codex is not
+    /// a model change, it is a change of tool — a different decision, and one
+    /// this data cannot support.
+    private static let downshiftTarget: [Provider: (model: String, label: String)] = [
+        .claude: ("claude-sonnet-5", "Sonnet 5"),
+        .codex: ("gpt-5.6-terra", "Terra"),
+    ]
+
     static func build(records: [UsageRecord],
                       estimator: Estimator,
                       sessions: [UsageEngine.SessionSummary],
@@ -82,22 +94,36 @@ enum Recommender {
 
         // 2. Tier downshift, sized to what's actually plausible rather than
         //    pretending every request could drop a tier.
-        let frontierLarge = records.filter {
-            estimator.entry(for: $0.model)?.tier == "frontier-large"
-        }
-        let largeUsd = frontierLarge.reduce(0.0) { $0 + (estimator.cost($1) ?? 0) }
-        if largeUsd > 5, totalUsd > 0, largeUsd / totalUsd > 0.6,
-           estimator.hasCoefficients(for: "claude-sonnet-5") {
-            let allSonnet = estimator.counterfactual(frontierLarge, as: "claude-sonnet-5").usd
-            let quarter = (largeUsd - allSonnet) * 0.25
+        //    Scoped per provider: a substitution is only meaningful inside the
+        //    tool you are already running, and replaying Codex tokens as a
+        //    Claude model would be advice to switch tools, not to switch models.
+        var byProvider: [Provider: [UsageRecord]] = [:]
+        for r in records { byProvider[r.provider, default: []].append(r) }
+
+        for (provider, providerRecords) in byProvider {
+            guard let target = downshiftTarget[provider],
+                  estimator.hasCoefficients(for: target.model) else { continue }
+            let frontierLarge = providerRecords.filter {
+                estimator.entry(for: $0.model)?.tier == "frontier-large"
+            }
+            let largeUsd = frontierLarge.reduce(0.0) { $0 + (estimator.cost($1) ?? 0) }
+            // Measured against this provider's own spend, so a tool that is a
+            // small slice of the total can still surface its own top-tier skew.
+            let providerUsd = providerRecords.reduce(0.0) { $0 + (estimator.cost($1) ?? 0) }
+            guard largeUsd > 5, providerUsd > 0, largeUsd / providerUsd > 0.6 else { continue }
+
+            let downshifted = estimator.counterfactual(frontierLarge, as: target.model).usd
+            let quarter = (largeUsd - downshifted) * 0.25
+            guard quarter > 0 else { continue }
             out.append(Recommendation(
-                id: "tier-downshift",
+                id: "tier-downshift-\(provider.rawValue)",
                 kind: .modelMix,
-                title: "Try Sonnet 5 as the default, reserving Opus/Fable for hard work",
-                evidence: String(format: "%.0f%%", 100 * largeUsd / totalUsd)
-                    + " of your spend (\(Format.usd(largeUsd))) is on top-tier models. "
-                    + "Sonnet 5 is roughly half the energy and a third of the price "
-                    + "per token.",
+                title: "In \(provider.displayName), try \(target.label) as the default "
+                    + "and keep the top tier for hard work",
+                evidence: String(format: "%.0f%%", 100 * largeUsd / providerUsd)
+                    + " of your \(provider.displayName) spend (\(Format.usd(largeUsd))) "
+                    + "is on top-tier models. \(target.label) is roughly half the energy "
+                    + "and a fraction of the price per token.",
                 caveat: "Estimated on shifting a quarter of that work — a rough figure, "
                     + "not a measurement. A weaker model needing extra turns can erase "
                     + "the saving, so change the default and watch, don't switch blind.",
@@ -111,7 +137,20 @@ enum Recommender {
             $0.totals.cacheWrite > 0 && $0.usd > 1 && $0.totals.cacheEfficiency < 0.75
         }
         if let worst = churn.max(by: { $0.usd < $1.usd }) {
-            let wasted = Double(worst.totals.cacheWrite) * 0.4 * 5.0 / 1_000_000
+            // Price the avoidable writes under the session's own model and
+            // vendor. The old form multiplied by a hardcoded $5/MTok — Opus's
+            // rate — which on a Codex session invents a saving outright, since
+            // OpenAI bills nothing at all to write a cache entry before GPT-5.6.
+            // That fabricated figure also drove `weight`, so it outranked real
+            // advice.
+            let avoidable = Int(Double(worst.totals.cacheWrite) * 0.4)
+            let probe = UsageRecord(
+                id: "", provider: worst.provider, timestamp: nil,
+                model: worst.models.first ?? "", input: 0, output: 0,
+                cacheWrite: avoidable, cacheWrite5m: 0, cacheWrite1h: 0,
+                cacheRead: 0, cwd: nil, gitBranch: nil, sessionId: nil,
+                isSidechain: false, isSubagent: false)
+            let wasted = estimator.cost(probe) ?? 0
             out.append(Recommendation(
                 id: "churn-\(worst.id)",
                 kind: .cacheChurn,
@@ -183,7 +222,5 @@ enum Recommender {
         return Format.percent(vals[vals.count / 2], places: 0)
     }
 
-    private static func short(_ model: String) -> String {
-        model.replacingOccurrences(of: "claude-", with: "")
-    }
+    private static func short(_ model: String) -> String { Format.model(model) }
 }

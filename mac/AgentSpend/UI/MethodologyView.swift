@@ -58,9 +58,11 @@ struct MethodologyView: View {
                 Row("boundary", engine.energyModel.boundary,
                     "GPU-only accounting would be ~2.4× lower.")
                 Row("model coefficients", "tier proxy",
-                    "No credible active-parameter figures are published for any Claude, "
-                    + "GPT-4o, or Gemini model, so tiers are anchored to measured "
-                    + "per-query figures and scaled by price. Confidence: low.")
+                    "No credible active-parameter figures are published for any Claude "
+                    + "or GPT model, so tiers are anchored to measured per-query figures "
+                    + "and scaled by price. Confidence: low, and lower still when "
+                    + "comparing across vendors, since price reflects positioning as "
+                    + "much as compute.")
             }
 
             Divider()

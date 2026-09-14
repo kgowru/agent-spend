@@ -4,7 +4,7 @@
 
 # AgentSpend
 
-**A macOS menu bar app that turns your Claude Code token spend into two honest numbers — actual dollars and estimated watt-hours — updated live as you work.**
+**A macOS menu bar app that turns your Claude Code and Codex token spend into two honest numbers — dollars and estimated watt-hours — updated live as you work.**
 
 So "switch to a cheaper model" becomes a quantified decision instead of a hunch.
 
@@ -20,10 +20,12 @@ So "switch to a cheaper model" becomes a quantified decision instead of a hunch.
 
 ## What it is
 
-AgentSpend reads Claude Code's own local logs at `~/.claude/projects` and shows
-what your usage costs — in money and in modelled electricity. It runs entirely
-on your Mac: **no API keys, no account, no network calls.** It picks up your
-usage automatically and updates while you work.
+AgentSpend reads the local logs your agent CLIs already write — Claude Code at
+`~/.claude/projects` and Codex at `~/.codex/sessions` — and shows what your
+usage costs, in money and in modelled electricity. It runs entirely on your Mac:
+**no API keys, no account, no network calls.** It picks up your usage
+automatically and updates while you work, and a tool you don't use simply
+doesn't appear.
 
 Native Swift, zero external dependencies (SQLite comes from the system). A ~1 MB
 universal binary that sits at 0% CPU when idle — a tool that burned power to
@@ -52,10 +54,18 @@ popover swaps the menu bar between cost and energy. Quit from there too.
 
 ## The honest caveat
 
-**The dollars are exact; the energy is an estimate.** No frontier AI vendor
-publishes per-token energy — Anthropic publishes nothing at all — so every
-Claude energy figure in circulation, including this one, is third-party
-modelling that carries a wide band.
+**The dollars are exact arithmetic on published rates; the energy is an
+estimate.** Two different kinds of uncertainty, and worth keeping apart.
+
+On the money: the rates are published and the arithmetic is exact, but if you're
+on a subscription — Claude Max, or ChatGPT Plus for Codex — those tokens are
+absorbed by the plan rather than billed per token. The figure is then a
+list-price equivalent: the right number for "which model should I use", not a
+number you were charged. Codex logs say which plan they ran under.
+
+On the energy: no frontier AI vendor publishes per-token energy — Anthropic
+publishes nothing at all — so every figure in circulation, including this one,
+is third-party modelling that carries a wide band.
 
 AgentSpend is built to say so. The model is anchored to three converging,
 production-grade public measurements (Google's median Gemini prompt at 0.24 Wh,

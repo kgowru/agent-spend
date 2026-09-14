@@ -76,6 +76,13 @@ struct EnergyModel: Decodable, Sendable {
 }
 
 struct PricingModel: Decodable, Sendable {
+    /// Cache rates as multiples of the model's base input rate.
+    ///
+    /// Per-vendor, because the two disagree materially: Anthropic charges a
+    /// premium to *write* the cache (1.25x for the 5-minute TTL, 2x for the
+    /// hour) and discounts reads to 0.1x, while OpenAI charges nothing to write
+    /// and discounts reads to 0.1x. Treating one vendor's terms as universal
+    /// silently mis-bills the other.
     struct CacheMultipliers: Decodable, Sendable {
         let read: Double
         let write5m: Double
@@ -84,11 +91,17 @@ struct PricingModel: Decodable, Sendable {
 
     struct Price: Decodable, Sendable {
         let id: String
+        let provider: Provider
         let input: Double   // USD per million tokens
         let output: Double
         let tier: String
         let confidence: String
         var why: String?
+        /// Overrides the vendor default when a single vendor's terms are not
+        /// uniform across its own catalogue. OpenAI began charging for cache
+        /// writes at GPT-5.6 having charged nothing at 5.5, so the terms are a
+        /// property of the model, not just the vendor.
+        var cache: CacheMultipliers?
     }
 
     struct UnknownModels: Decodable, Sendable {
@@ -96,7 +109,7 @@ struct PricingModel: Decodable, Sendable {
     }
 
     let schemaVersion: Int
-    let cacheMultipliers: CacheMultipliers
+    let cacheMultipliers: [String: CacheMultipliers]
     let models: [Price]
     let unknownModels: UnknownModels
 
@@ -104,6 +117,13 @@ struct PricingModel: Decodable, Sendable {
     /// priced at their apparent tier and flagged rather than silently dropped.
     var allPrices: [String: Price] {
         Dictionary((models + unknownModels.entries).map { ($0.id, $0) }) { a, _ in a }
+    }
+
+    /// Cache terms for a vendor. Returns nil rather than a default, so a
+    /// provider added without its terms fails loudly instead of being billed
+    /// under someone else's contract.
+    func cacheMultipliers(for provider: Provider) -> CacheMultipliers? {
+        cacheMultipliers[provider.rawValue]
     }
 }
 

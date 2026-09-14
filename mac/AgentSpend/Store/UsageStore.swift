@@ -46,6 +46,40 @@ final class UsageStore {
             CREATE INDEX IF NOT EXISTS idx_model ON requests(model);
             CREATE INDEX IF NOT EXISTS idx_cwd ON requests(cwd);
             """)
+        try migrate()
+    }
+
+    /// Bring an existing database up to the current schema.
+    ///
+    /// `CREATE TABLE IF NOT EXISTS` above is a no-op on a database that already
+    /// exists, so a new column has to be added explicitly or every prior
+    /// install would break on the next write. `user_version` is SQLite's
+    /// built-in schema counter and costs nothing to read.
+    private func migrate() throws {
+        let version = (try? scalarInt("PRAGMA user_version;")) ?? 0
+
+        if version < 1 {
+            // Every row predating this column came from Claude Code, which was
+            // the only supported source, so backfilling it is exact rather than
+            // a guess.
+            if !(try hasColumn("provider")) {
+                try exec("ALTER TABLE requests ADD COLUMN provider TEXT;")
+            }
+            try exec("UPDATE requests SET provider = 'claude' WHERE provider IS NULL;")
+            try exec("CREATE INDEX IF NOT EXISTS idx_provider ON requests(provider);")
+            try exec("PRAGMA user_version = 1;")
+        }
+    }
+
+    private func hasColumn(_ name: String) throws -> Bool {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "PRAGMA table_info(requests);", -1, &stmt, nil) == SQLITE_OK
+        else { throw StoreError.sqlite(String(cString: sqlite3_errmsg(db))) }
+        defer { sqlite3_finalize(stmt) }
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let c = sqlite3_column_text(stmt, 1), String(cString: c) == name { return true }
+        }
+        return false
     }
 
     deinit { sqlite3_close(db) }
@@ -76,8 +110,9 @@ final class UsageStore {
         let sql = """
             INSERT INTO requests
               (request_id, session_id, ts, model, input, cache_write, cache_w5m,
-               cache_w1h, cache_read, output, cwd, git_branch, is_sidechain, is_subagent)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+               cache_w1h, cache_read, output, cwd, git_branch, is_sidechain,
+               is_subagent, provider)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(request_id) DO UPDATE SET
               output = MAX(requests.output, excluded.output);
             """
@@ -108,6 +143,7 @@ final class UsageStore {
             bindText(stmt, 12, r.gitBranch)
             sqlite3_bind_int(stmt, 13, r.isSidechain ? 1 : 0)
             sqlite3_bind_int(stmt, 14, r.isSubagent ? 1 : 0)
+            bindText(stmt, 15, r.provider.rawValue)
             guard sqlite3_step(stmt) == SQLITE_DONE else {
                 try? exec("ROLLBACK;")
                 throw StoreError.sqlite(String(cString: sqlite3_errmsg(db)))
@@ -144,7 +180,7 @@ final class UsageStore {
 
     /// Aggregated token totals grouped by an arbitrary column.
     func totals(groupedBy column: String, since: Date? = nil) throws -> [String: TokenTotals] {
-        precondition(["model", "cwd", "git_branch"].contains(column),
+        precondition(["model", "cwd", "git_branch", "provider"].contains(column),
                      "column is interpolated into SQL — allowlist only")
         var sql = """
             SELECT COALESCE(\(column), 'unknown'), COUNT(*), SUM(input), SUM(cache_write),
@@ -181,7 +217,8 @@ final class UsageStore {
         var stmt: OpaquePointer?
         let sql = """
             SELECT request_id, session_id, ts, model, input, cache_write, cache_w5m,
-                   cache_w1h, cache_read, output, cwd, git_branch, is_sidechain, is_subagent
+                   cache_w1h, cache_read, output, cwd, git_branch, is_sidechain,
+                   is_subagent, provider
             FROM requests;
             """
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
@@ -197,6 +234,9 @@ final class UsageStore {
             }
             out.append(UsageRecord(
                 id: text(0) ?? "",
+                // A row written before the provider column existed is Claude
+                // Code by construction — it was the only source at the time.
+                provider: text(14).flatMap(Provider.init(rawValue:)) ?? .claude,
                 timestamp: sqlite3_column_type(stmt, 2) == SQLITE_NULL
                     ? nil : Date(timeIntervalSince1970: Double(sqlite3_column_int64(stmt, 2))),
                 model: text(3) ?? "",

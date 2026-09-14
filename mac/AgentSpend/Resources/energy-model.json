@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-07-27",
+  "generated": "2026-09-13",
   "unit": "watt_hours_per_1000_tokens",
   "boundary": "full-datacenter",
   "boundaryNote": "Includes accelerator, host CPU/DRAM, network/storage, and facility PUE. GPU-only accounting would be ~2.4x lower — Google's own comparison of the two boundaries.",
@@ -41,7 +41,7 @@
     }
   },
 
-  "tiersNote": "For every Claude, GPT-4o, and Gemini model there are NO credible active-parameter figures published. Rather than invent them, models are assigned a tier anchored to the converged ~0.3 Wh median-query figure and scaled by published price ratio as a weak proxy for compute. Marked basis 'tier-proxy' and confidence 'low' throughout. Open-weight models with known active params should instead use basis 'active-params' and the formula below.",
+  "tiersNote": "For every Claude, GPT-5, and Gemini model there are NO credible active-parameter figures published. Rather than invent them, models are assigned a tier anchored to the converged ~0.3 Wh median-query figure and scaled by published price ratio as a weak proxy for compute. Marked basis 'tier-proxy' and confidence 'low' throughout. Open-weight models with known active params should instead use basis 'active-params' and the formula below. Cross-vendor tiering is weaker still: price reflects positioning and margin as much as compute, so comparing a GPT tier against a Claude tier carries more uncertainty than comparing two models from the same vendor.",
 
   "tiers": {
     "frontier-large": { "whPer1kInput": { "v": 0.30, "lo": 0.10, "hi": 1.00 }, "whPer1kOutput": { "v": 1.20, "lo": 0.40, "hi": 4.00 } },
@@ -82,7 +82,20 @@
     { "id": "claude-sonnet-5",   "tier": "frontier-mid",   "basis": "tier-proxy", "confidence": "low" },
     { "id": "claude-sonnet-4-6", "tier": "frontier-mid",   "basis": "tier-proxy", "confidence": "low" },
     { "id": "claude-sonnet-4-5", "tier": "frontier-mid",   "basis": "tier-proxy", "confidence": "low" },
-    { "id": "claude-haiku-4-5",  "tier": "frontier-small", "basis": "tier-proxy", "confidence": "low" }
+    { "id": "claude-haiku-4-5",  "tier": "frontier-small", "basis": "tier-proxy", "confidence": "low" },
+
+    { "id": "gpt-5.6-sol",   "tier": "frontier-large", "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5.6-terra", "tier": "frontier-mid",   "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5.6-luna",  "tier": "frontier-small", "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5.5",       "tier": "frontier-large", "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5.4",       "tier": "frontier-mid"  , "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5.4-mini",  "tier": "frontier-mid",   "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5.3-codex", "tier": "frontier-mid",   "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5.2",       "tier": "frontier-mid",   "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5.1",       "tier": "frontier-mid",   "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5",         "tier": "frontier-mid",   "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5-mini",    "tier": "frontier-small", "basis": "tier-proxy", "confidence": "low" },
+    { "id": "gpt-5-nano",    "tier": "frontier-small", "basis": "tier-proxy", "confidence": "low" }
   ],
 
   "caveats": [

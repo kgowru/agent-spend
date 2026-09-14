@@ -1,10 +1,11 @@
 # AgentSpend
 
-A macOS menu bar app that turns your Claude Code token spend into estimated
-electricity and actual dollars, so "switch to a cheaper model" becomes a
+A macOS menu bar app that turns your Claude Code and Codex token spend into
+estimated electricity and dollars, so "switch to a cheaper model" becomes a
 quantified decision instead of a hunch.
 
-Reads `~/.claude/projects` directly. No API keys, no network, fully offline.
+Reads `~/.claude/projects` and `~/.codex/sessions` directly. No API keys, no
+network, fully offline.
 
 ```
 ./build-app.sh          # build build/AgentSpend.app
@@ -46,6 +47,62 @@ Claude Code token volume, so whether a cache hit costs 10% or 1% of a fresh
 input token swings the total ~4.7×. There is no published energy measurement of
 a prompt-cache hit — the 10% price discount is a billing decision, not a
 measured ratio. It's a slider in the Method pane rather than a buried constant.
+
+## Sources
+
+Two agent CLIs:
+
+| Tool | Logs | Identity |
+|---|---|---|
+| Claude Code | `~/.claude/projects/**/*.jsonl` | `message.id` |
+| Codex | `~/.codex/sessions/**/rollout-*.jsonl` | `(session, cumulative total)` |
+
+Both sources are always constructed, even when the directory is absent — an
+empty root simply enumerates no files, so a tool you never run still shows
+nothing. Filtering absent roots at launch looked tidier and was a bug: the 60s
+rescan backstop lives inside the watcher, so dropping the source dropped the
+self-heal with it, and a CLI installed after the app started was never picked
+up until the next relaunch.
+
+Each source gets its own FSEvents watcher, and changed paths are matched to a
+source against the *resolved* root — FSEvents reports canonicalized paths, so a
+symlinked `~/.codex` would otherwise match nothing and silently turn every live
+refresh into a no-op. Paths matching no root are offered to every parser rather
+than dropped; a parser handed the other format finds no usage marker and
+contributes nothing.
+
+**Codex disagrees with Claude Code on four things that change the arithmetic.**
+Each is a way to be quietly wrong rather than visibly broken:
+
+1. **`input_tokens` already contains `cached_input_tokens`** — the opposite of
+   Anthropic's split. Verified on the real corpus: `total_tokens == input_tokens
+   + output_tokens`, with the cached count nested inside input. Passing the raw
+   figure through bills 2.1M cached tokens at the full input rate on a single
+   session. `UsageRecord.input` means *uncached* input, and the subtraction
+   happens at the parser boundary so nothing downstream has to know.
+2. **`reasoning_output_tokens` is a subset of `output_tokens`**, not an addition.
+   Adding it double-counts the priciest class. `cache_write_input_tokens` is
+   likewise a component of `input_tokens` and is subtracted out for the same
+   reason — billing it as fresh input *and* as a write is 2.25x on GPT-5.6.
+   Every observed row has a zero write count, so that half is reasoned from the
+   `total == input + output` identity rather than measured, and a row that
+   contradicts it increments a counter instead of being clamped away.
+3. **Model and cwd arrive on a different event.** They appear once in
+   `turn_context`; every later `token_count` row depends on having seen it.
+   Because a resumed pass starts at a byte offset well past that event, the
+   state is persisted in the `FileIndex` entry — without that, every record
+   after the first restart would be unattributable.
+
+Cache terms are per-model, not global. Anthropic charges a premium to *write*
+the cache (1.25x at the 5-minute TTL, 2x at the hour); OpenAI charged nothing
+until GPT-5.6, which introduced a 1.25x write charge. One vendor's contract
+applied to the other silently mis-bills.
+
+**Dollars for a subscription plan are a list-price equivalent, not money
+charged.** Codex logs record `plan_type`, and on a ChatGPT plan the tokens are
+absorbed by the subscription rather than billed at API rates. The same is true
+of Claude Code on Max. The figure remains the right one for comparing models
+against each other; it is not an invoice.
 
 ## Ingestion, and why it's fussy
 
@@ -122,8 +179,9 @@ rows, so the memo survives no-op refreshes.
 ## Verifying
 
 ```
-./.build/release/AgentSpend --selftest        # 61 assertions
-./.build/release/AgentSpend --verify [root]   # aggregates, diffable vs the oracle
+./.build/release/AgentSpend --selftest          # 136 assertions
+./.build/release/AgentSpend --verify [root]     # aggregates, diffable vs the oracle
+./.build/release/AgentSpend --verify-codex [root]  # the same, for Codex logs
 ./.build/release/AgentSpend --render <dir>    # render each pane to PNG
 ./.build/release/AgentSpend --window [--tab method]   # views in a normal window
 ./.build/release/AgentSpend --bench           # time the derived analytics (cold + memo)
@@ -147,8 +205,30 @@ Xcode reinstall to run the tests would be a bad trade.
 
 ## Not done
 
-Codex ingestion, notifications for unusually hot sessions, and live grid carbon
-via Electricity Maps.
+Notifications for unusually hot sessions, and live grid carbon via Electricity
+Maps.
+
+Known gaps in the Codex path, none of them silent: the prescan byte-scans each
+line up to three times where the Claude parser scans once (one cold-parse cost,
+not a steady-state one); `plan_type` is captured into the parse context but no
+pane reads it yet, so the subscription caveat above lives only in this file;
+`--verify-codex` is a per-provider flag where `--verify --provider codex` would
+generalize; and `FileIndex.Entry.context` is a stringly-typed bag whose keys are
+checked by nothing.
+
+`tools/prototype.py` still parses Claude Code logs only. It remains the oracle
+for that path — the frozen-snapshot diff is exact — but the Codex parser is
+covered by `--selftest` and by `--verify-codex` diffed against an independent
+reimplementation, not by the Python oracle.
+
+Grok Build (`~/.grok/sessions/**/updates.jsonl`) is the obvious next source and
+records a per-turn `costUsdTicks`. Note `~/.grok` is shared with an unrelated
+third-party CLI of the same name, so a parser has to disambiguate by file
+presence rather than assume the format.
+
+Cursor is deliberately excluded: its local token counts cover ~7% of messages,
+carry no model attribution, and its real spend lives behind a team-admin API
+key — which the app's offline guarantee rules out.
 
 Release builds are Developer ID signed and notarized (see `RELEASING.md`);
 `build-app.sh` still ad-hoc signs for fast local iteration.

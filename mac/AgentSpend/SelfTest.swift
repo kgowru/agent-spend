@@ -81,6 +81,8 @@ struct SelfTest {
             try incremental()
             try store()
             try estimator(energy, pricing)
+            try codex()
+            try codexPricing(pricing)
         } catch {
             failures.append("threw: \(error)")
         }
@@ -96,6 +98,263 @@ struct SelfTest {
     }
 
     // MARK: - Cases
+
+    // MARK: - Codex
+
+    private func codexMeta(session: String = "sess-1", cwd: String = "/w/proj") -> String {
+        """
+        {"type":"session_meta","timestamp":"2026-07-30T22:11:35.907Z",\
+        "payload":{"id":"\(session)","cwd":"\(cwd)","originator":"codex_cli"}}
+        """
+    }
+
+    private func codexTurnContext(model: String = "gpt-5.6-sol") -> String {
+        """
+        {"type":"turn_context","timestamp":"2026-07-30T22:11:36.000Z",\
+        "payload":{"model":"\(model)","cwd":"/w/proj","effort":"low"}}
+        """
+    }
+
+    /// `total*` are cumulative; `last*` is the delta for this turn.
+    private func codexTokenCount(lastInput: Int, lastCached: Int, lastOutput: Int,
+                                 totalInput: Int, totalOutput: Int,
+                                 lastCacheWrite: Int = 0, reasoning: Int = 0,
+                                 plan: String = "plus") -> String {
+        """
+        {"type":"event_msg","timestamp":"2026-07-30T22:11:43.378Z",\
+        "payload":{"type":"token_count","info":{\
+        "total_token_usage":{"input_tokens":\(totalInput),"cached_input_tokens":0,\
+        "cache_write_input_tokens":0,"output_tokens":\(totalOutput),\
+        "reasoning_output_tokens":0,"total_tokens":\(totalInput + totalOutput)},\
+        "last_token_usage":{"input_tokens":\(lastInput),"cached_input_tokens":\(lastCached),\
+        "cache_write_input_tokens":\(lastCacheWrite),"output_tokens":\(lastOutput),\
+        "reasoning_output_tokens":\(reasoning),"total_tokens":\(lastInput + lastOutput)},\
+        "model_context_window":258400},\
+        "rate_limits":{"plan_type":"\(plan)","primary":{"used_percent":2.0}}}}
+        """
+    }
+
+    private func ingestCodex(_ index: inout FileIndex) -> ([String: UsageRecord], JSONLIngestor.Stats) {
+        var stats = JSONLIngestor.Stats()
+        let out = CodexIngestor.ingest(root: tmp, index: &index, stats: &stats)
+        return (out, stats)
+    }
+
+    private mutating func codex() throws {
+        try freshTmp()
+        let dir = try project("2026/07/30")
+        let f = dir.appending(path: "rollout-a.jsonl")
+
+        // One session, two turns. Deltas sum to the running total.
+        try ([codexMeta(),
+              codexTurnContext(),
+              codexTokenCount(lastInput: 1000, lastCached: 900, lastOutput: 50,
+                              totalInput: 1000, totalOutput: 50, reasoning: 20),
+              codexTokenCount(lastInput: 2000, lastCached: 1800, lastOutput: 30,
+                              totalInput: 3000, totalOutput: 80)]
+             .joined(separator: "\n") + "\n")
+            .write(to: f, atomically: true, encoding: .utf8)
+
+        var idx = FileIndex()
+        let (recs, _) = ingestCodex(&idx)
+        eq(recs.count, 2, "codex: one record per token_count turn")
+
+        let sorted = recs.values.sorted { ($0.input) < ($1.input) }
+        guard sorted.count == 2 else { return }
+
+        // THE correctness trap: input_tokens includes cached_input_tokens.
+        eq(sorted[0].input, 100, "codex: input excludes the cached portion")
+        eq(sorted[0].cacheRead, 900, "codex: cached tokens land in cacheRead")
+        eq(sorted[1].input, 200, "codex: second turn input excludes cache")
+        eq(sorted[1].cacheRead, 1800, "codex: second turn cache read")
+
+        // Reasoning tokens are already inside output_tokens.
+        eq(sorted[0].output, 50, "codex: reasoning is not added to output")
+        eq(sorted[0].provider, .codex, "codex: provider tagged")
+        eq(sorted[0].model, "gpt-5.6-sol", "codex: model carried from turn_context")
+        eq(sorted[0].cwd, "/w/proj", "codex: cwd carried from session_meta")
+        eq(sorted[0].sessionId, "sess-1", "codex: session id carried")
+
+        // Idempotence: a full reparse from a clean index yields identical keys.
+        var idx2 = FileIndex()
+        let (again, _) = ingestCodex(&idx2)
+        eq(Set(again.keys), Set(recs.keys), "codex: reparse is idempotent")
+
+        // Incremental resume is the reason parser state is persisted: the
+        // appended turn is parsed without re-reading the turn_context line.
+        // Appended in place: an atomic rewrite would change the inode and be
+        // correctly treated as a rotation, which is not what this is testing.
+        let h = try FileHandle(forWritingTo: f)
+        try h.seekToEnd()
+        try h.write(contentsOf: Data((codexTokenCount(
+            lastInput: 500, lastCached: 400, lastOutput: 10,
+            totalInput: 3500, totalOutput: 90) + "\n").utf8))
+        try h.close()
+        let (appended, _) = ingestCodex(&idx)
+        eq(appended.count, 1, "codex: only the appended turn is re-read")
+        eq(appended.values.first?.model, "gpt-5.6-sol",
+           "codex: model survives an incremental resume past turn_context")
+        eq(appended.values.first?.input, 100, "codex: appended turn input excludes cache")
+
+        // A turn that spent nothing contributes nothing — the imported desktop
+        // session stubs are full of these.
+        try freshTmp()
+        let d2 = try project("2026/07/31")
+        try ([codexMeta(session: "empty"),
+              codexTokenCount(lastInput: 0, lastCached: 0, lastOutput: 0,
+                              totalInput: 0, totalOutput: 0)]
+             .joined(separator: "\n") + "\n")
+            .write(to: d2.appending(path: "rollout-b.jsonl"), atomically: true, encoding: .utf8)
+        var idx3 = FileIndex()
+        let (empty, _) = ingestCodex(&idx3)
+        eq(empty.count, 0, "codex: zero-token turns are dropped")
+
+        // Usage with no turn_context must surface, not vanish. It is tagged
+        // with an id that matches no coefficient, so the app's unrecognized
+        // banner catches it rather than silently counting it as free.
+        try freshTmp()
+        let d3 = try project("2026/08/01")
+        try ([codexMeta(session: "nomodel"),
+              codexTokenCount(lastInput: 100, lastCached: 0, lastOutput: 10,
+                              totalInput: 100, totalOutput: 10)]
+             .joined(separator: "\n") + "\n")
+            .write(to: d3.appending(path: "rollout-c.jsonl"), atomically: true, encoding: .utf8)
+        var idx4 = FileIndex()
+        let (nomodel, _) = ingestCodex(&idx4)
+        eq(nomodel.count, 1, "codex: usage without a model is kept")
+        eq(nomodel.values.first?.model, CodexIngestor.unknownModel,
+           "codex: unattributable usage is flagged, not dropped")
+
+        // An index written before the context field existed must still decode.
+        // Swift's synthesized Decodable ignores property defaults and throws on
+        // a missing key, which would discard the whole index and silently turn
+        // the next launch into a full cold re-read of the corpus.
+        let legacy = #"{"entries":{"/a/b.jsonl":{"inode":1,"size":2,"offset":2,"mtime":3.5,"tail":""}}}"#
+        if let decoded = try? JSONDecoder().decode(FileIndex.self, from: Data(legacy.utf8)) {
+            passed += 1
+            eq(decoded.entries["/a/b.jsonl"]?.offset, 2, "legacy index keeps its offset")
+            eq(decoded.entries["/a/b.jsonl"]?.context.isEmpty, true,
+               "legacy index gets an empty context")
+        } else {
+            failures.append("legacy file-index.json must still decode")
+        }
+
+        // Keys from the two parsers must not collide: Claude uses the raw
+        // message id, Codex a namespaced synthetic one. A collision would make
+        // one tool's turn silently overwrite the other's.
+        ok(CodexIngestor.recordID(session: "s", totals: [:], fallback: 5).hasPrefix("codex:"),
+           "codex keys are namespaced away from claude message ids")
+
+        try multiSource()
+    }
+
+    /// Two sources, one shared index, one merged result — the shape
+    /// `UsageEngine.parseOffMain` drives.
+    private mutating func multiSource() throws {
+        try freshTmp()
+        let claudeRoot = try project("claude")
+        let codexRoot = try project("codex")
+        try (row(id: "m1") + "\n")
+            .write(to: claudeRoot.appending(path: "s.jsonl"), atomically: true, encoding: .utf8)
+        try ([codexMeta(), codexTurnContext(),
+              codexTokenCount(lastInput: 1000, lastCached: 900, lastOutput: 50,
+                              totalInput: 1000, totalOutput: 50)]
+             .joined(separator: "\n") + "\n")
+            .write(to: codexRoot.appending(path: "r.jsonl"), atomically: true, encoding: .utf8)
+
+        let sources = [LogSource(provider: .claude, root: claudeRoot),
+                       LogSource(provider: .codex, root: codexRoot)]
+        var idx = FileIndex()
+        var stats = JSONLIngestor.Stats()
+        var merged: [String: UsageRecord] = [:]
+        for s in sources {
+            merged.merge(s.ingest(files: nil, index: &idx, stats: &stats)) { a, b in
+                b.output > a.output ? b : a
+            }
+        }
+        eq(merged.count, 2, "both sources contribute records")
+        eq(Set(merged.values.map(\.provider)), [.claude, .codex],
+           "each record keeps its own provider")
+
+        // Scoping: a watcher only ever reports paths beneath its own root, and
+        // handing a Codex rollout to the Claude parser would not error — it
+        // would just silently find nothing. The prefix filter is what prevents
+        // that, so it has to actually select.
+        let codexFile = codexRoot.appending(path: "r.jsonl")
+        let scoped = [codexFile].filter { $0.path.hasPrefix(codexRoot.path) }
+        eq(scoped.count, 1, "codex path scopes to the codex source")
+        ok([codexFile].filter { $0.path.hasPrefix(claudeRoot.path) }.isEmpty,
+           "codex path does not scope to the claude source")
+    }
+
+    /// The cache contract differs by vendor and, within OpenAI, by model
+    /// version. Getting this wrong is invisible in the UI but wrong in the total.
+    private mutating func codexPricing(_ pricing: PricingModel) throws {
+        let est = Estimator(energy: try Coefficients.load().0, pricing: pricing)
+
+        // gpt-5.6 charges 1.25x input to write the cache; gpt-5.5 charges nothing.
+        let write = UsageRecord(id: "w", provider: .codex, timestamp: nil,
+                                model: "gpt-5.6-sol", input: 0, output: 0,
+                                cacheWrite: 1_000_000, cacheWrite5m: 0, cacheWrite1h: 0,
+                                cacheRead: 0, cwd: nil, gitBranch: nil, sessionId: nil,
+                                isSidechain: false, isSubagent: false)
+        close(est.cost(write) ?? -1, 5.0, 1e-9, "gpt-5.6 cache write bills at 1.25x input")
+
+        var older = write; older.model = "gpt-5.5"
+        close(est.cost(older) ?? -1, 0.0, 1e-9, "gpt-5.5 cache write is free")
+
+        // Cache reads are 0.1x input across the OpenAI catalogue.
+        var read = write
+        read.cacheWrite = 0
+        read.cacheRead = 1_000_000
+        close(est.cost(read) ?? -1, 0.4, 1e-9, "gpt-5.6 cache read bills at 0.1x input")
+
+        // An Anthropic record must still use Anthropic's terms.
+        let claude = UsageRecord(id: "c", provider: .claude, timestamp: nil,
+                                 model: "claude-opus-4-8", input: 0, output: 0,
+                                 cacheWrite: 1_000_000, cacheWrite5m: 0, cacheWrite1h: 1_000_000,
+                                 cacheRead: 0, cwd: nil, gitBranch: nil, sessionId: nil,
+                                 isSidechain: false, isSubagent: false)
+        close(est.cost(claude) ?? -1, 10.0, 1e-9, "claude 1h cache write still bills at 2x")
+
+        // Cache writes are a component of input_tokens, not an addition, so the
+        // parser must subtract them. Billing them twice is 2.25x on GPT-5.6.
+        var idx = FileIndex()
+        var st = IngestStats()
+        try freshTmp()
+        let d = try project("2026/09/01")
+        try ([codexMeta(session: "cw"), codexTurnContext(),
+              codexTokenCount(lastInput: 10_000, lastCached: 2_000, lastOutput: 100,
+                              totalInput: 10_000, totalOutput: 100, lastCacheWrite: 3_000)]
+             .joined(separator: "\n") + "\n")
+            .write(to: d.appending(path: "r.jsonl"), atomically: true, encoding: .utf8)
+        let cw = CodexIngestor.ingest(root: tmp, index: &idx, stats: &st)
+        eq(cw.values.first?.input, 5_000, "codex: cache writes are subtracted from input too")
+        eq(cw.values.first?.cacheWrite, 3_000, "codex: cache writes still counted once")
+        eq(cw.values.first?.cacheRead, 2_000, "codex: cache reads counted once")
+        eq(st.anomalousTokenSplit, 0, "codex: a consistent row is not flagged")
+
+        // Every priced model must resolve to energy AND cache terms — a model
+        // that prices at nil is coerced to $0 by every caller, so the check
+        // that feeds the unrecognized banner has to cover all three.
+        for p in pricing.models {
+            ok(est.hasCoefficients(for: p.id), "\(p.id) has price, energy and cache terms")
+        }
+        // Every provider needs cache terms, or its records silently cost $0.
+        for provider in Provider.allCases {
+            ok(pricing.cacheMultipliers(for: provider) != nil,
+               "provider \(provider.rawValue) has cache terms")
+        }
+
+        // Counterfactuals must not quote one vendor's models against another's
+        // tokens — that is advice to change tool, which these logs can't support.
+        for (provider, models) in UsageEngine.counterfactualCandidates {
+            for m in models {
+                eq(pricing.allPrices[m]?.provider, provider,
+                   "counterfactual candidate \(m) belongs to \(provider.rawValue)")
+            }
+        }
+    }
 
     private mutating func modelIDs() throws {
         eq(ModelID.normalize("claude-haiku-4-5-20251001"), "claude-haiku-4-5",
@@ -223,7 +482,7 @@ struct SelfTest {
     private mutating func store() throws {
         try freshTmp()
         let s = try UsageStore(path: tmp.appending(path: "t.sqlite"))
-        let base = UsageRecord(id: "m1", timestamp: Date(timeIntervalSince1970: 1785209396),
+        let base = UsageRecord(id: "m1", provider: .claude, timestamp: Date(timeIntervalSince1970: 1785209396),
                                model: "claude-opus-4-8", input: 10, output: 50, cacheWrite: 5,
                                cacheWrite5m: 0, cacheWrite1h: 5, cacheRead: 100, cwd: "/w/p",
                                gitBranch: "main", sessionId: "sess", isSidechain: false,
@@ -245,7 +504,7 @@ struct SelfTest {
         // Full field round-trip.
         try freshTmp()
         let s2 = try UsageStore(path: tmp.appending(path: "t2.sqlite"))
-        let r = UsageRecord(id: "m1", timestamp: Date(timeIntervalSince1970: 1785209396),
+        let r = UsageRecord(id: "m1", provider: .claude, timestamp: Date(timeIntervalSince1970: 1785209396),
                             model: "claude-fable-5", input: 1, output: 2, cacheWrite: 3,
                             cacheWrite5m: 4, cacheWrite1h: 5, cacheRead: 6, cwd: "/w/proj",
                             gitBranch: "feat", sessionId: "sess", isSidechain: true,
@@ -254,7 +513,7 @@ struct SelfTest {
         eq(try s2.allRecords().first, r, "all fields round-trip through sqlite")
 
         func mk(_ id: String, _ model: String, _ out: Int) -> UsageRecord {
-            UsageRecord(id: id, timestamp: Date(), model: model, input: 1, output: out,
+            UsageRecord(id: id, provider: .claude, timestamp: Date(), model: model, input: 1, output: out,
                         cacheWrite: 0, cacheWrite5m: 0, cacheWrite1h: 0, cacheRead: 10,
                         cwd: nil, gitBranch: nil, sessionId: nil, isSidechain: false,
                         isSubagent: false)
@@ -272,7 +531,7 @@ struct SelfTest {
     private mutating func estimator(_ energy: EnergyModel, _ pricing: PricingModel) throws {
         var est = Estimator(energy: energy, pricing: pricing)
 
-        let r = UsageRecord(id: "m", timestamp: nil, model: "claude-opus-4-8", input: 1000,
+        let r = UsageRecord(id: "m", provider: .claude, timestamp: nil, model: "claude-opus-4-8", input: 1000,
                             output: 1000, cacheWrite: 1000, cacheWrite5m: 1000, cacheWrite1h: 0,
                             cacheRead: 1000, cwd: nil, gitBranch: nil, sessionId: nil,
                             isSidechain: false, isSubagent: false)
@@ -285,7 +544,7 @@ struct SelfTest {
 
         // The 1h cache-write premium is 2x vs the 5m 1.25x.
         func w(_ w5: Int, _ w1h: Int) -> UsageRecord {
-            UsageRecord(id: "m", timestamp: nil, model: "claude-opus-4-8", input: 0, output: 0,
+            UsageRecord(id: "m", provider: .claude, timestamp: nil, model: "claude-opus-4-8", input: 0, output: 0,
                         cacheWrite: w5 + w1h, cacheWrite5m: w5, cacheWrite1h: w1h, cacheRead: 0,
                         cwd: nil, gitBranch: nil, sessionId: nil, isSidechain: false,
                         isSubagent: false)
@@ -295,7 +554,7 @@ struct SelfTest {
 
         // Silently coercing an unknown model to zero is the failure mode that
         // makes a tool like this quietly wrong.
-        let unknown = UsageRecord(id: "m", timestamp: nil, model: "claude-from-the-future",
+        let unknown = UsageRecord(id: "m", provider: .claude, timestamp: nil, model: "claude-from-the-future",
                                   input: 100, output: 100, cacheWrite: 0, cacheWrite5m: 0,
                                   cacheWrite1h: 0, cacheRead: 0, cwd: nil, gitBranch: nil,
                                   sessionId: nil, isSidechain: false, isSubagent: false)
@@ -307,7 +566,7 @@ struct SelfTest {
             ok(est.hasCoefficients(for: m.id), "cataloged model \(m.id) resolves")
         }
 
-        let big = UsageRecord(id: "m", timestamp: nil, model: "claude-opus-4-8", input: 1000,
+        let big = UsageRecord(id: "m", provider: .claude, timestamp: nil, model: "claude-opus-4-8", input: 1000,
                               output: 1000, cacheWrite: 1000, cacheWrite5m: 0,
                               cacheWrite1h: 1000, cacheRead: 100_000, cwd: nil, gitBranch: nil,
                               sessionId: nil, isSidechain: false, isSubagent: false)
@@ -318,7 +577,7 @@ struct SelfTest {
 
         // ~95% of real token volume is cache reads, so this one coefficient
         // moves the total more than any model-choice decision does.
-        let realistic = UsageRecord(id: "m", timestamp: nil, model: "claude-opus-4-8",
+        let realistic = UsageRecord(id: "m", provider: .claude, timestamp: nil, model: "claude-opus-4-8",
                                     input: 8_000, output: 17_000, cacheWrite: 215_000,
                                     cacheWrite5m: 0, cacheWrite1h: 215_000,
                                     cacheRead: 4_250_000, cwd: nil, gitBranch: nil,
@@ -330,7 +589,7 @@ struct SelfTest {
         ok(high / low > 4.0, "cacheReadFactor swings the total ~4.6x across its band")
         est.cacheReadFactorOverride = nil
 
-        let rs = [UsageRecord(id: "m", timestamp: nil, model: "claude-opus-4-8", input: 1000,
+        let rs = [UsageRecord(id: "m", provider: .claude, timestamp: nil, model: "claude-opus-4-8", input: 1000,
                               output: 1000, cacheWrite: 0, cacheWrite5m: 0, cacheWrite1h: 0,
                               cacheRead: 10_000, cwd: nil, gitBranch: nil, sessionId: nil,
                               isSidechain: false, isSubagent: false)]

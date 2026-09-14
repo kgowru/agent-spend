@@ -66,7 +66,7 @@ struct InsightsView: View {
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(cfs, id: \.model) { cf in
                     HStack {
-                        Text(cf.model.replacingOccurrences(of: "claude-", with: ""))
+                        Text(Format.model(cf.model))
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Text(String(format: "%.2f× energy", cf.whRatio))
                             .frame(width: 88, alignment: .trailing)

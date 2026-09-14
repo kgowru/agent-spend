@@ -7,7 +7,7 @@ import Foundation
 /// parser bug in the Swift ingestor, not a modelling disagreement — both read
 /// the same coefficient JSON.
 enum CLI {
-    static func runVerify(root: URL) -> Int32 {
+    static func runVerify(root: URL, provider: Provider = .claude) -> Int32 {
         do {
             let (energyModel, pricing) = try Coefficients.load()
             var estimator = Estimator(energy: energyModel, pricing: pricing)
@@ -16,9 +16,9 @@ enum CLI {
             var stats = JSONLIngestor.Stats()
             let clock = ContinuousClock()
             var records: [UsageRecord] = []
+            let source = LogSource(provider: provider, root: root)
             let elapsed = clock.measure {
-                records = Array(JSONLIngestor.ingest(root: root, index: &index,
-                                                     stats: &stats).values)
+                records = Array(source.ingest(files: nil, index: &index, stats: &stats).values)
             }
 
             let gb = Double(stats.bytesRead) / 1e9
