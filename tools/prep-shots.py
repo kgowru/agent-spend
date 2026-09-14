@@ -101,16 +101,19 @@ def main():
     src, dst = sys.argv[1], sys.argv[2]
     os.makedirs(dst, exist_ok=True)
 
-    # Rendered pane -> published filename.
+    # Rendered pane -> published filename, plus how far down the pane the part
+    # actually worth showing runs. Cropping here rather than masking in CSS
+    # keeps the subject large in the frame instead of shrinking a full pane
+    # into a card and fading most of it away.
     wanted = {
-        "content-home": "shot-today",
-        "content-sessions": "shot-sessions",
-        "content-savings": "shot-savings",
-        "content-method": "shot-method",
-        "menubar-label": "shot-menubar",
+        "content-home": ("shot-today", 0.44),
+        "content-sessions": ("shot-sessions", 0.88),
+        "content-savings": ("shot-savings", 0.38),
+        "content-method": ("shot-method", 1.0),
+        "menubar-label": ("shot-menubar", 1.0),
     }
 
-    for stem, out_name in wanted.items():
+    for stem, (out_name, focus) in wanted.items():
         path = os.path.join(src, f"{stem}.png")
         if not os.path.exists(path):
             print(f"  skip {stem} (missing)")
@@ -120,6 +123,9 @@ def main():
         if stem != "menubar-label":
             im = crop_placeholder(im)
         im = trim(im)
+        if focus < 1.0:
+            w, h = im.size
+            im = im.crop((0, 0, w, int(h * focus)))
         out = os.path.join(dst, f"{out_name}.png")
         im.save(out, optimize=True)
         kb = os.path.getsize(out) / 1024
