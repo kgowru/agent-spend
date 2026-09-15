@@ -36,7 +36,7 @@ const SHOTS: Shot[] = [
   {
     src: "/shots/shot-savings.png",
     width: 812,
-    height: 351,
+    height: 535,
     title: "What it would save you",
     body: "Ranked over your whole history, not just today. Each suggestion carries the number it is worth and the caveat that comes with it.",
     alt: "The savings pane: up to $45 identified, and a recommendation to default to Sonnet 5 while reserving the top tier for hard work.",
@@ -62,14 +62,21 @@ const SHOTS: Shot[] = [
   },
 ];
 
-/* Dissolves the capture into the tile at the bottom, where the caption takes
- * over, instead of ending on a hard edge. Only the bottom fades: the sides
- * meet the tile's own rounded clip, and fading them inward clipped the first
- * character of every line. */
-const EDGE_FADE = {
-  maskImage: "linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%)",
+/* Softens the bottom of a capture that is taller than its frame, so it runs
+ * out rather than stopping on a cut line. Starts late: the capture is sized to
+ * the frame's width, so most of it should be legible, not faded. */
+const BOTTOM_FADE = {
+  maskImage: "linear-gradient(to bottom, #000 0%, #000 82%, transparent 100%)",
   WebkitMaskImage:
-    "linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%)",
+    "linear-gradient(to bottom, #000 0%, #000 82%, transparent 100%)",
+} as const;
+
+/* The frame's hairline, fading out as it descends so the capture sits in
+ * something that dissolves into the tile instead of a closed box. */
+const FADING_BORDER = {
+  maskImage: "linear-gradient(to bottom, #000 0%, rgb(0 0 0 / 0.35) 55%, transparent 95%)",
+  WebkitMaskImage:
+    "linear-gradient(to bottom, #000 0%, rgb(0 0 0 / 0.35) 55%, transparent 95%)",
 } as const;
 
 function MenuBarStrip() {
@@ -106,24 +113,33 @@ function MenuBarStrip() {
 
 function Tile({ shot }: { shot: Shot }) {
   return (
-    <figure
-      className={`glass flex flex-col overflow-hidden rounded-3xl ${shot.span}`}
-    >
-      {/* The capture fills whatever height the bento row settles on, anchored
-       * top-left so the headline is never the part that gets cropped. `flex-1`
-       * keeps a short pane from leaving dead space under it. */}
-      <div className="relative min-h-[230px] flex-1">
+    <figure className={`glass flex flex-col rounded-3xl p-3 ${shot.span}`}>
+      {/*
+       * The capture sits inset in its own frame rather than bleeding to the
+       * tile's edges. Bleeding meant the tile's rounded clip ate the first
+       * character of every line and the last column of every table; sized to
+       * the frame's width instead, the whole pane stays legible.
+       */}
+      {/* Hugs the capture rather than stretching to the bento row's height:
+       * a stretched frame left a black void under the shorter panes. */}
+      <div className="relative overflow-hidden rounded-2xl bg-black/25">
         <Image
           src={shot.src}
           alt={shot.alt}
-          fill
+          width={shot.width}
+          height={shot.height}
           sizes="(min-width: 768px) 560px, 100vw"
-          className="object-cover object-left-top"
-          style={EDGE_FADE}
+          className="w-full"
+          style={BOTTOM_FADE}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-2xl border border-white/12"
+          style={FADING_BORDER}
         />
       </div>
 
-      <figcaption className="px-7 pb-7 sm:px-8 sm:pb-8">
+      <figcaption className="px-4 pt-5 pb-4 sm:px-5 sm:pt-6 sm:pb-5">
         <h3 className="text-lg font-medium">{shot.title}</h3>
         <p className="mt-2 text-sm/6 text-muted">{shot.body}</p>
       </figcaption>
@@ -150,7 +166,9 @@ export function Showcase() {
 
       <MenuBarStrip />
 
-      <div className="mt-14 grid gap-5 md:grid-cols-6">
+      {/* `items-start` so a tile ends under its own caption. Stretching them to
+       * the row's height left a slab of empty glass below the shorter ones. */}
+      <div className="mt-14 grid items-start gap-5 md:grid-cols-6">
         {SHOTS.map((shot) => (
           <Tile key={shot.src} shot={shot} />
         ))}

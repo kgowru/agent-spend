@@ -108,7 +108,7 @@ def main():
     wanted = {
         "content-home": ("shot-today", 0.44),
         "content-sessions": ("shot-sessions", 0.88),
-        "content-savings": ("shot-savings", 0.38),
+        "content-savings": ("shot-savings", 0.58),
         "content-method": ("shot-method", 1.0),
         "menubar-label": ("shot-menubar", 1.0),
     }
