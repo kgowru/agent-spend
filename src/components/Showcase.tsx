@@ -92,23 +92,106 @@ const FADING_BORDER = {
     "linear-gradient(to bottom, #000 0%, rgb(0 0 0 / 0.35) 55%, transparent 95%)",
 } as const;
 
+/*
+ * Stand-in glyphs for the status items our own sits between. Drawn rather
+ * than captured: a screenshot of a real menu bar would carry whatever the
+ * machine happened to be running, which is how the first pass leaked private
+ * data. Generic shapes, decorative only.
+ */
+function Bluetooth() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className="size-[15px]">
+      <path
+        d="m5.5 4.5 5 7L8 13.5v-11l2.5 2-5 7"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function Battery() {
+  return (
+    <svg viewBox="0 0 26 16" fill="none" className="h-[15px] w-[24px]">
+      <rect
+        x="1"
+        y="4"
+        width="21"
+        height="9"
+        rx="2.6"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        opacity="0.75"
+      />
+      <rect x="2.8" y="5.8" width="14" height="5.4" rx="1.5" fill="currentColor" />
+      <path
+        d="M23.6 7.2v2.6c.8-.3 1.2-.8 1.2-1.3s-.4-1-1.2-1.3Z"
+        fill="currentColor"
+        opacity="0.75"
+      />
+    </svg>
+  );
+}
+
+function Wifi() {
+  return (
+    <svg viewBox="0 0 18 16" fill="none" className="size-[16px]">
+      <path
+        d="M1.6 6.1a10.5 10.5 0 0 1 14.8 0M4.2 8.8a6.8 6.8 0 0 1 9.6 0M6.8 11.5a3.1 3.1 0 0 1 4.4 0"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
+      <circle cx="9" cy="13.6" r="1.05" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ControlCentre() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className="size-[15px]">
+      <path d="M2 5h12M2 11h12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity="0.75" />
+      <circle cx="10.5" cy="5" r="2.1" fill="currentColor" />
+      <circle cx="5.5" cy="11" r="2.1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function Search() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className="size-[15px]">
+      <circle cx="7.2" cy="7.2" r="4.6" stroke="currentColor" strokeWidth="1.35" />
+      <path d="m10.7 10.7 3 3" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function MenuBarStrip() {
   return (
     <div className="mt-12">
       {/*
-       * The item as it actually sits: in a strip of menu bar, which fades out
-       * left and right rather than ending in a pill. Centred rather than right
-       * aligned like the real menu bar, so it sits on the section's axis.
+       * The item as it actually sits: in a strip of menu bar, among the status
+       * items it shares the corner with, fading out left and right rather than
+       * ending in a pill. Centred rather than right aligned like the real menu
+       * bar, so it sits on the section's axis. The neighbours are dimmer than
+       * our own item, which is the thing being pointed at.
        */}
       <div
-        className="relative mx-auto flex h-9 max-w-2xl items-center justify-center rounded-lg border-t border-white/10 bg-white/6 backdrop-blur-xl"
+        className="relative mx-auto flex h-9 max-w-3xl items-center justify-center gap-3.5 rounded-lg border-t border-white/10 bg-white/6 px-4 backdrop-blur-xl sm:gap-4"
         style={{
           maskImage:
-            "linear-gradient(to right, transparent, #000 18%, #000 82%, transparent)",
+            "linear-gradient(to right, transparent, #000 15%, #000 85%, transparent)",
           WebkitMaskImage:
-            "linear-gradient(to right, transparent, #000 18%, #000 82%, transparent)",
+            "linear-gradient(to right, transparent, #000 15%, #000 85%, transparent)",
         }}
       >
+        <div aria-hidden="true" className="flex items-center gap-3.5 text-ink/45 sm:gap-4">
+          <Bluetooth />
+          <Battery />
+        </div>
+
         <Image
           src="/shots/shot-menubar.png"
           alt="The AgentSpend menu bar item, showing a lightning bolt and today's cost."
@@ -117,6 +200,13 @@ function MenuBarStrip() {
           className="h-[18px] w-auto"
           unoptimized
         />
+
+        <div aria-hidden="true" className="flex items-center gap-3.5 text-ink/45 sm:gap-4">
+          <Wifi />
+          <Search />
+          <ControlCentre />
+          <span className="text-[13px] whitespace-nowrap">Sun 9:41</span>
+        </div>
       </div>
       <p className="mt-4 text-center text-sm text-muted">
         Always visible. Updates while you work.

@@ -127,6 +127,33 @@ def trim(im, tol=6):
     return im.crop((left, top, right + 1, bottom + 1))
 
 
+def to_alpha(im):
+    """Rebuild a flat-background grayscale capture as RGBA.
+
+    The menu bar label renders as light glyphs on the pane's opaque
+    background. On the page it sits among transparent SVG glyphs, where an
+    opaque rectangle reads as a box drawn around it. The capture is strictly
+    grayscale, so the anti-aliasing can be recovered exactly: every pixel is
+    the foreground composited over the background at some coverage, and that
+    coverage is the alpha we want.
+    """
+    im = im.convert("RGB")
+    w, h = im.size
+    pixels = list(im.getdata())
+    bg = im.getpixel((0, 0))[0]
+    fg = max(p[0] for p in pixels)
+    if fg <= bg:
+        return im.convert("RGBA")
+
+    span = fg - bg
+    out = Image.new("RGBA", (w, h))
+    out.putdata([
+        (fg, fg, fg, max(0, min(255, round((p[0] - bg) * 255 / span))))
+        for p in pixels
+    ])
+    return out
+
+
 def main():
     if len(sys.argv) < 3:
         sys.exit("usage: prep-shots.py <render-dir> <out-dir>")
@@ -158,6 +185,8 @@ def main():
         if focus < 1.0:
             w, h = im.size
             im = im.crop((0, 0, w, int(h * focus)))
+        if stem == "menubar-label":
+            im = to_alpha(im)
         out = os.path.join(dst, f"{out_name}.png")
         im.save(out, optimize=True)
         kb = os.path.getsize(out) / 1024
