@@ -77,11 +77,11 @@ function MenuBarStrip() {
     <div className="mt-12">
       {/*
        * The item as it actually sits: in a strip of menu bar, which fades out
-       * left and right rather than ending in a pill. Menu bar items are right
-       * aligned on macOS, so the item hugs the right of the strip.
+       * left and right rather than ending in a pill. Centred rather than right
+       * aligned like the real menu bar, so it sits on the section's axis.
        */}
       <div
-        className="relative mx-auto flex h-9 max-w-2xl items-center justify-end rounded-lg border-t border-white/10 bg-white/6 pr-4 backdrop-blur-xl"
+        className="relative mx-auto flex h-9 max-w-2xl items-center justify-center rounded-lg border-t border-white/10 bg-white/6 backdrop-blur-xl"
         style={{
           maskImage:
             "linear-gradient(to right, transparent, #000 18%, #000 82%, transparent)",
