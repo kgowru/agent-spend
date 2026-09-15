@@ -7,9 +7,11 @@ import Image from "next/image";
  * which is the reason the repo ships no captures of a live store.
  *
  * The panes are cropped to their subject at asset time (tools/prep-shots.py),
- * so a card shows a legible headline rather than a whole pane shrunk to fit.
- * Here each one is bled into its tile and faded at the edges instead of being
- * boxed in window chrome — the hard-edged title bar read as a seam.
+ * so a card shows a legible headline rather than a whole pane shrunk to fit,
+ * and rendered at AGENTSPEND_RENDER_SCALE=4 so a 2x display has pixels to
+ * spare rather than upscaling. Each sits inset in its own frame with a
+ * hairline that fades out, instead of being boxed in window chrome — the
+ * hard-edged title bar read as a seam.
  */
 
 type Shot = {
@@ -21,13 +23,21 @@ type Shot = {
   alt: string;
   /** Tailwind column span on the bento grid at md and up. */
   span: string;
+  /** Rendered frame width, so Next picks a candidate that survives a
+   *  2x display instead of upscaling one sized for a narrower tile. The
+   *  breakpoint is in `rem` to match what Tailwind's `md:` compiles to
+   *  (48rem): stated in px, the two desync the moment a visitor raises their
+   *  browser's default font size, and the grid goes single column while the
+   *  browser is still being told each tile is a narrow bento cell. */
+  sizes: string;
 };
 
 const SHOTS: Shot[] = [
   {
     src: "/shots/shot-today.png",
-    width: 812,
-    height: 718,
+    sizes: "(min-width: 48rem) 620px, 100vw",
+    width: 1624,
+    height: 1435,
     title: "Today, and the days behind it",
     body: "The headline is what you have spent and the energy behind it. Under it, every day ranked, so a heavy session is obvious the moment it lands.",
     alt: "The AgentSpend home pane: a 14 day total of $87, a bar chart of daily cost, and a per day table of cost, energy and request counts.",
@@ -35,8 +45,9 @@ const SHOTS: Shot[] = [
   },
   {
     src: "/shots/shot-savings.png",
-    width: 812,
-    height: 535,
+    sizes: "(min-width: 48rem) 290px, 100vw",
+    width: 1624,
+    height: 1071,
     title: "What it would save you",
     body: "Ranked over your whole history, not just today. Each suggestion carries the number it is worth and the caveat that comes with it.",
     alt: "The savings pane: up to $45 identified, and a recommendation to default to Sonnet 5 while reserving the top tier for hard work.",
@@ -44,8 +55,9 @@ const SHOTS: Shot[] = [
   },
   {
     src: "/shots/shot-sessions.png",
-    width: 812,
-    height: 564,
+    sizes: "(min-width: 48rem) 455px, 100vw",
+    width: 1624,
+    height: 1129,
     title: "Session by session",
     body: "Which project, which branch, which model, and what the run cost.",
     alt: "The sessions pane: a by hour histogram and a list of sessions with project, branch, model, request count and cost.",
@@ -53,8 +65,9 @@ const SHOTS: Shot[] = [
   },
   {
     src: "/shots/shot-method.png",
-    width: 840,
-    height: 412,
+    sizes: "(min-width: 48rem) 455px, 100vw",
+    width: 1680,
+    height: 804,
     title: "Every coefficient, in the open",
     body: "The energy model is a model. The app ships its per model baselines and sources so you can read them, and argue with them.",
     alt: "The methodology pane: a per model baseline table of watt hours per 1k input and output tokens, with each model's token share.",
@@ -99,9 +112,10 @@ function MenuBarStrip() {
         <Image
           src="/shots/shot-menubar.png"
           alt="The AgentSpend menu bar item, showing a lightning bolt and today's cost."
-          width={82}
-          height={28}
+          width={163}
+          height={47}
           className="h-[18px] w-auto"
+          unoptimized
         />
       </div>
       <p className="mt-4 text-center text-sm text-muted">
@@ -128,7 +142,7 @@ function Tile({ shot }: { shot: Shot }) {
           alt={shot.alt}
           width={shot.width}
           height={shot.height}
-          sizes="(min-width: 768px) 560px, 100vw"
+          sizes={shot.sizes}
           className="w-full"
           style={BOTTOM_FADE}
         />

@@ -17,9 +17,16 @@ import sys
 
 from PIL import Image
 
-# How far above a mid-image placeholder to cut, so the control's own
-# section heading goes with it instead of dangling.
-LABEL_GAP = 52
+# How far above a mid-image placeholder to cut, so the control's own section
+# heading goes with it instead of dangling. Expressed against the width the
+# value was tuned at, so it tracks AGENTSPEND_RENDER_SCALE instead of cutting
+# in the wrong place the moment the render resolution changes.
+LABEL_GAP_AT = (52, 840)
+
+
+def label_gap(width):
+    gap, at_width = LABEL_GAP_AT
+    return max(1, round(gap * width / at_width))
 
 # SwiftUI's placeholder yellow, matched loosely — it is the only saturated
 # yellow in the UI.
@@ -55,9 +62,9 @@ def crop_placeholder(im):
         rows = placeholder_rows(im)
         w, h = im.size
         if rows:
-            return im.crop((0, 0, w, max(1, rows[0] - LABEL_GAP)))
+            return im.crop((0, 0, w, max(1, rows[0] - label_gap(w))))
         return im
-    return im.crop((0, 0, w, max(1, rows[0] - LABEL_GAP)))
+    return im.crop((0, 0, w, max(1, rows[0] - label_gap(w))))
 
 
 def trim(im, tol=6):
@@ -90,9 +97,34 @@ def trim(im, tol=6):
     while right > left and flat_col(right):
         right -= 1
 
-    pad = 10
-    return im.crop((max(0, left - pad), max(0, top - pad),
-                    min(w, right + 1 + pad), min(h, bottom + 1 + pad)))
+    # Breathing room around the content — but only through the pane's own
+    # background. A pane can sit inside a frame of a different colour (the
+    # methodology render carries 20 rows of pure black above the card), and
+    # padding blindly put that frame straight back into the published asset.
+    pad = max(4, round(10 * w / 840))
+    inner = im.getpixel((min(w - 1, left + 2), min(h - 1, top + 2)))[:3]
+
+    def matches_inner(px):
+        return all(abs(px[i] - inner[i]) <= tol for i in range(3))
+
+    def grow(start, step, limit, sample):
+        """Step outward from `start` while the line still reads as background."""
+        moved = 0
+        pos = start
+        while moved < pad:
+            nxt = pos + step
+            if nxt < 0 or nxt >= limit or not matches_inner(sample(nxt)):
+                break
+            pos = nxt
+            moved += 1
+        return pos
+
+    top = grow(top, -1, h, lambda y: im.getpixel((min(w - 1, left + 2), y)))
+    bottom = grow(bottom, 1, h, lambda y: im.getpixel((min(w - 1, left + 2), y)))
+    left = grow(left, -1, w, lambda x: im.getpixel((x, min(h - 1, top + 2))))
+    right = grow(right, 1, w, lambda x: im.getpixel((x, min(h - 1, top + 2))))
+
+    return im.crop((left, top, right + 1, bottom + 1))
 
 
 def main():
