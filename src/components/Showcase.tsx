@@ -1,73 +1,64 @@
 import Image from "next/image";
+import type { ReactNode } from "react";
+import { ScreenToday } from "./screens/ScreenToday";
+import { ScreenSavings } from "./screens/ScreenSavings";
+import { ScreenSessions } from "./screens/ScreenSessions";
+import { ScreenMethod } from "./screens/ScreenMethod";
 
 /*
- * Product imagery. Every shot is a real render of the app's own view tree,
- * produced by `AgentSpend --render` against a store of synthetic usage
- * (tools/seed-demo-store.py). No real project names or spend appear anywhere,
- * which is the reason the repo ships no captures of a live store.
+ * Product screens, rebuilt as HTML rather than shipped as screenshots. A raster
+ * softens the moment it is displayed wider than it was captured, and these
+ * tiles do exactly that; as markup the type stays vector at any zoom or pixel
+ * density, and it is selectable and readable to a screen reader.
  *
- * The panes are cropped to their subject at asset time (tools/prep-shots.py),
- * so a card shows a legible headline rather than a whole pane shrunk to fit,
- * and rendered at AGENTSPEND_RENDER_SCALE=4 so a 2x display has pixels to
- * spare rather than upscaling. Each sits inset in its own frame with a
- * hairline that fades out, instead of being boxed in window chrome — the
- * hard-edged title bar read as a seam.
+ * The panes are faithful to the app: every colour was sampled from a real
+ * `AgentSpend --render` capture, the structure follows the SwiftUI source, and
+ * the figures are the same synthetic demo dataset the captures used
+ * (tools/seed-demo-store.py), so no real project names or spend appear. They
+ * are a recreation though, so they have to be revisited when the panes change.
+ *
+ * Each sits inset in its own frame with a hairline that fades out, rather than
+ * boxed in window chrome, which read as a seam.
  */
 
 type Shot = {
-  src: string;
-  width: number;
-  height: number;
+  key: string;
+  screen: ReactNode;
   title: string;
   body: string;
   alt: string;
   /** Tailwind column span on the bento grid at md and up. */
   span: string;
-  /** Rendered frame width, so Next picks a candidate that survives a
-   *  2x display instead of upscaling one sized for a narrower tile. The
-   *  breakpoint is in `rem` to match what Tailwind's `md:` compiles to
-   *  (48rem): stated in px, the two desync the moment a visitor raises their
-   *  browser's default font size, and the grid goes single column while the
-   *  browser is still being told each tile is a narrow bento cell. */
-  sizes: string;
 };
 
 const SHOTS: Shot[] = [
   {
-    src: "/shots/shot-today.png",
-    sizes: "(min-width: 48rem) 620px, 100vw",
-    width: 1624,
-    height: 1435,
+    key: "today",
+    screen: <ScreenToday />,
     title: "Today, and the days behind it",
     body: "The headline is what you have spent and the energy behind it. Under it, every day ranked, so a heavy session is obvious the moment it lands.",
     alt: "The AgentSpend home pane: a 14 day total of $87, a bar chart of daily cost, and a per day table of cost, energy and request counts.",
     span: "md:col-span-4",
   },
   {
-    src: "/shots/shot-savings.png",
-    sizes: "(min-width: 48rem) 290px, 100vw",
-    width: 1624,
-    height: 1071,
+    key: "savings",
+    screen: <ScreenSavings />,
     title: "What it would save you",
     body: "Ranked over your whole history, not just today. Each suggestion carries the number it is worth and the caveat that comes with it.",
     alt: "The savings pane: up to $45 identified, and a recommendation to default to Sonnet 5 while reserving the top tier for hard work.",
     span: "md:col-span-2",
   },
   {
-    src: "/shots/shot-sessions.png",
-    sizes: "(min-width: 48rem) 455px, 100vw",
-    width: 1624,
-    height: 1129,
+    key: "sessions",
+    screen: <ScreenSessions />,
     title: "Session by session",
     body: "Which project, which branch, which model, and what the run cost.",
     alt: "The sessions pane: a by hour histogram and a list of sessions with project, branch, model, request count and cost.",
     span: "md:col-span-3",
   },
   {
-    src: "/shots/shot-method.png",
-    sizes: "(min-width: 48rem) 455px, 100vw",
-    width: 1680,
-    height: 804,
+    key: "method",
+    screen: <ScreenMethod />,
     title: "Every coefficient, in the open",
     body: "The energy model is a model. The app ships its per model baselines and sources so you can read them, and argue with them.",
     alt: "The methodology pane: a per model baseline table of watt hours per 1k input and output tokens, with each model's token share.",
@@ -75,16 +66,7 @@ const SHOTS: Shot[] = [
   },
 ];
 
-/* Softens the bottom of a capture that is taller than its frame, so it runs
- * out rather than stopping on a cut line. Starts late: the capture is sized to
- * the frame's width, so most of it should be legible, not faded. */
-const BOTTOM_FADE = {
-  maskImage: "linear-gradient(to bottom, #000 0%, #000 82%, transparent 100%)",
-  WebkitMaskImage:
-    "linear-gradient(to bottom, #000 0%, #000 82%, transparent 100%)",
-} as const;
-
-/* The frame's hairline, fading out as it descends so the capture sits in
+/* The frame's hairline, fading out as it descends so the screen sits in
  * something that dissolves into the tile instead of a closed box. */
 const FADING_BORDER = {
   maskImage: "linear-gradient(to bottom, #000 0%, rgb(0 0 0 / 0.35) 55%, transparent 95%)",
@@ -274,25 +256,24 @@ function MenuBarStrip() {
 
 function Tile({ shot }: { shot: Shot }) {
   return (
-    <figure className={`glass flex flex-col rounded-3xl p-3 ${shot.span}`}>
+    /* `min-w-0`: a grid item defaults to min-width:auto, so the screens' own
+     * min-content width (fixed numeric columns plus long strings) would push
+     * the tile wider than the viewport rather than letting the pane compress. */
+    <figure className={`glass flex min-w-0 flex-col rounded-3xl p-3 ${shot.span}`}>
       {/*
-       * The capture sits inset in its own frame rather than bleeding to the
-       * tile's edges. Bleeding meant the tile's rounded clip ate the first
-       * character of every line and the last column of every table; sized to
-       * the frame's width instead, the whole pane stays legible.
+       * The screen sits inset in its own frame rather than bleeding to the
+       * tile's edges, where the rounded clip would eat the first character of
+       * every line and the last column of every table. It hugs its content:
+       * stretching to the bento row's height left a void under the shorter
+       * panes.
        */}
-      {/* Hugs the capture rather than stretching to the bento row's height:
-       * a stretched frame left a black void under the shorter panes. */}
-      <div className="relative overflow-hidden rounded-2xl bg-black/25">
-        <Image
-          src={shot.src}
-          alt={shot.alt}
-          width={shot.width}
-          height={shot.height}
-          sizes={shot.sizes}
-          className="w-full"
-          style={BOTTOM_FADE}
-        />
+      <div className="relative overflow-hidden rounded-2xl">
+        {/* Announced as a single described graphic. The markup underneath is
+         * real text, but read out it is a wall of demo figures; the summary is
+         * what a listener actually wants from an illustration. */}
+        <div role="img" aria-label={shot.alt}>
+          {shot.screen}
+        </div>
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 rounded-2xl border border-white/12"
@@ -331,7 +312,7 @@ export function Showcase() {
        * the row's height left a slab of empty glass below the shorter ones. */}
       <div className="mt-14 grid items-start gap-5 md:grid-cols-6">
         {SHOTS.map((shot) => (
-          <Tile key={shot.src} shot={shot} />
+          <Tile key={shot.key} shot={shot} />
         ))}
       </div>
 
