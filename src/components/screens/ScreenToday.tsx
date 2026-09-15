@@ -145,9 +145,8 @@ export function ScreenToday() {
 
       {/* The rest of the pane: the period's shape in one line, then Home's own
        * strip of today's advice, then the caveat that applies to every figure
-       * above it. `mt-auto` pins this to the bottom when the tile is taller
-       * than the content. */}
-      <div className="mt-auto flex flex-col gap-[14px] pt-[14px]">
+       * above it. */}
+      <div className="flex flex-col gap-[14px] pt-[14px]">
         <Rule />
         <div
           className="flex items-baseline justify-between gap-3 text-[12px]"

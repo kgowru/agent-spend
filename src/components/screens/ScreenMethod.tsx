@@ -125,7 +125,7 @@ export function ScreenMethod() {
       </p>
 
       {/* Every assumption the model rests on, each with the reason for it. */}
-      <div className="mt-auto flex flex-col gap-[6px]">
+      <div className="flex flex-col gap-[6px]">
         <Label>Coefficients</Label>
         {COEFFICIENTS.map((c) => (
           <div key={c.name} className="flex flex-col">

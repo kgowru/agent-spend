@@ -67,6 +67,22 @@ const SHOTS: Shot[] = [
   },
 ];
 
+/*
+ * Every screen is cropped to the same height, so a tile shows the top of a
+ * pane rather than all of it. Two things fall out of that: the rows line up
+ * without having to pad the shorter panes, and the cards stay short enough
+ * that the captions under them are still on screen together.
+ */
+const SCREEN_H = 248;
+
+/* The crop runs out rather than stopping on a cut line, which is what says
+ * there is more pane below. */
+const SCREEN_FADE = {
+  maskImage: "linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%)",
+  WebkitMaskImage:
+    "linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%)",
+} as const;
+
 /* The frame's hairline, fading out as it descends so the screen sits in
  * something that dissolves into the tile instead of a closed box. */
 const FADING_BORDER = {
@@ -261,15 +277,18 @@ function Tile({ shot }: { shot: Shot }) {
       {/*
        * The screen sits inset in its own frame rather than bleeding to the
        * tile's edges, where the rounded clip would eat the first character of
-       * every line and the last column of every table. It hugs its content:
-       * stretching to the bento row's height left a void under the shorter
-       * panes.
+       * every line and the last column of every table. Cropped to a fixed
+       * height: the point is the top of each pane, and the rest running out
+       * under the fade says there is more of it.
        */}
-      <div className="relative flex-1 overflow-hidden rounded-2xl">
+      <div
+        className="relative overflow-hidden rounded-2xl"
+        style={{ height: SCREEN_H }}
+      >
         {/* Announced as a single described graphic. The markup underneath is
          * real text, but read out it is a wall of demo figures; the summary is
          * what a listener actually wants from an illustration. */}
-        <div role="img" aria-label={shot.alt}>
+        <div role="img" aria-label={shot.alt} style={SCREEN_FADE}>
           {shot.screen}
         </div>
         <div

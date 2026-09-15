@@ -131,7 +131,7 @@ export function ScreenSavings() {
       </div>
 
       {/* The ceiling the recommendations are measured against. */}
-      <div className="mt-auto flex flex-col gap-1">
+      <div className="flex flex-col gap-1">
         <Label>Whole history replayed on one model</Label>
         {REPLAY.map((r) => (
           <div key={r.model} className="flex items-baseline gap-2 text-[12px]">
