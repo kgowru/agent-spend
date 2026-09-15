@@ -1,0 +1,40 @@
+# Render Blueprint for the AgentSpend site.
+#
+# A Node web service rather than a static site: /api/feedback is a server
+# route, so there is a server to run. `next start` binds to $PORT, which Render
+# sets, so no extra flags are needed.
+#
+# To use it: in the Render dashboard, New > Blueprint, point it at this repo,
+# and Render reads this file. RESEND_API_KEY has `sync: false`, so Render will
+# prompt for it rather than expecting it in source control.
+services:
+  - type: web
+    name: agentspend-site
+    runtime: node
+    plan: free
+    # Only rebuild when the site itself changes; the macOS app and the tooling
+    # share this repo and have nothing to do with the deploy.
+    buildFilter:
+      paths:
+        - src/**
+        - public/**
+        - package.json
+        - pnpm-lock.yaml
+        - next.config.ts
+        - postcss.config.mjs
+        - tsconfig.json
+        - render.yaml
+    # corepack picks up the pnpm version pinned in package.json#packageManager,
+    # so the build uses the same pnpm the lockfile was written by.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    startCommand: pnpm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      # Set in the dashboard. Without it /api/feedback answers 503 and the form
+      # says it is not configured, rather than failing silently.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FEEDBACK_TO_EMAIL
+        value: k.gowru@gmail.com
