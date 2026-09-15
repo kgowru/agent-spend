@@ -98,14 +98,38 @@ const FADING_BORDER = {
  * machine happened to be running, which is how the first pass leaked private
  * data. Generic shapes, decorative only.
  */
-function Bluetooth() {
+function DotGrid() {
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor" className="size-[15px]">
+      {[4, 8, 12].map((y) =>
+        [4, 8, 12].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.25" />),
+      )}
+    </svg>
+  );
+}
+
+function CheckCircle() {
   return (
     <svg viewBox="0 0 16 16" fill="none" className="size-[15px]">
+      <circle cx="8" cy="8" r="6.4" stroke="currentColor" strokeWidth="1.35" />
       <path
-        d="m5.5 4.5 5 7L8 13.5v-11l2.5 2-5 7"
+        d="m5.2 8.2 2 2 3.6-4"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function Cloud() {
+  return (
+    <svg viewBox="0 0 18 16" fill="none" className="size-[16px]">
+      <path
+        d="M4.9 12.2h7.6a2.9 2.9 0 0 0 .3-5.8 4.1 4.1 0 0 0-7.8-.9 3.35 3.35 0 0 0-.1 6.7Z"
         stroke="currentColor"
         strokeWidth="1.3"
-        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
@@ -114,22 +138,23 @@ function Bluetooth() {
 
 function Battery() {
   return (
-    <svg viewBox="0 0 26 16" fill="none" className="h-[15px] w-[24px]">
+    <svg viewBox="0 0 27 16" fill="none" className="h-[14px] w-[25px]">
       <rect
-        x="1"
-        y="4"
-        width="21"
-        height="9"
-        rx="2.6"
+        x="0.6"
+        y="3.6"
+        width="22"
+        height="9.2"
+        rx="3"
         stroke="currentColor"
-        strokeWidth="1.2"
-        opacity="0.75"
+        strokeWidth="1.1"
+        opacity="0.6"
       />
-      <rect x="2.8" y="5.8" width="14" height="5.4" rx="1.5" fill="currentColor" />
+      {/* ~91%, matching a nearly full charge. */}
+      <rect x="2.2" y="5.2" width="18.8" height="6" rx="1.9" fill="currentColor" />
       <path
-        d="M23.6 7.2v2.6c.8-.3 1.2-.8 1.2-1.3s-.4-1-1.2-1.3Z"
+        d="M24.2 6.6v3c.9-.3 1.4-.9 1.4-1.5s-.5-1.2-1.4-1.5Z"
         fill="currentColor"
-        opacity="0.75"
+        opacity="0.6"
       />
     </svg>
   );
@@ -152,9 +177,10 @@ function Wifi() {
 function ControlCentre() {
   return (
     <svg viewBox="0 0 16 16" fill="none" className="size-[15px]">
-      <path d="M2 5h12M2 11h12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity="0.75" />
-      <circle cx="10.5" cy="5" r="2.1" fill="currentColor" />
-      <circle cx="5.5" cy="11" r="2.1" fill="currentColor" />
+      <rect x="1.4" y="2.6" width="13.2" height="4.6" rx="2.3" stroke="currentColor" strokeWidth="1.2" opacity="0.65" />
+      <rect x="1.4" y="8.8" width="13.2" height="4.6" rx="2.3" stroke="currentColor" strokeWidth="1.2" opacity="0.65" />
+      <circle cx="10.6" cy="4.9" r="1.35" fill="currentColor" />
+      <circle cx="5.4" cy="11.1" r="1.35" fill="currentColor" />
     </svg>
   );
 }
@@ -178,18 +204,37 @@ function MenuBarStrip() {
        * bar, so it sits on the section's axis. The neighbours are dimmer than
        * our own item, which is the thing being pointed at.
        */}
+      {/*
+       * Three columns with equal-weight flanks, so the app's own item lands on
+       * the section's centre line. Centring the row as a whole put it off axis,
+       * because the Apple cluster on the right is far wider than the
+       * third-party glyphs on the left.
+       */}
       <div
-        className="relative mx-auto flex h-9 max-w-3xl items-center justify-center gap-3.5 rounded-lg border-t border-white/10 bg-white/6 px-4 backdrop-blur-xl sm:gap-4"
+        className="relative mx-auto grid h-9 max-w-3xl grid-cols-[1fr_auto_1fr] items-center gap-4 rounded-lg border-t border-white/10 bg-white/6 px-4 backdrop-blur-xl"
         style={{
           maskImage:
-            "linear-gradient(to right, transparent, #000 15%, #000 85%, transparent)",
+            "linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)",
           WebkitMaskImage:
-            "linear-gradient(to right, transparent, #000 15%, #000 85%, transparent)",
+            "linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)",
         }}
       >
-        <div aria-hidden="true" className="flex items-center gap-3.5 text-ink/45 sm:gap-4">
-          <Bluetooth />
-          <Battery />
+        {/*
+         * Other third-party items, which is what our own sits among. They drop
+         * out as the strip narrows: on a phone the full cluster overflows and
+         * squeezes the one item the section is actually about.
+         */}
+        <div
+          aria-hidden="true"
+          className="flex items-center justify-end gap-4 text-ink/45"
+        >
+          <span className="hidden md:block">
+            <DotGrid />
+          </span>
+          <span className="hidden sm:block">
+            <CheckCircle />
+          </span>
+          <Cloud />
         </div>
 
         <Image
@@ -201,11 +246,23 @@ function MenuBarStrip() {
           unoptimized
         />
 
-        <div aria-hidden="true" className="flex items-center gap-3.5 text-ink/45 sm:gap-4">
+        {/* The system cluster macOS pins to the right of everything else. */}
+        <div
+          aria-hidden="true"
+          className="flex items-center justify-start gap-3 text-ink/45"
+        >
+          <span className="hidden text-[13px] tracking-tight sm:inline">91%</span>
+          <Battery />
           <Wifi />
-          <Search />
-          <ControlCentre />
-          <span className="text-[13px] whitespace-nowrap">Sun 9:41</span>
+          <span className="hidden sm:block">
+            <Search />
+          </span>
+          <span className="hidden sm:block">
+            <ControlCentre />
+          </span>
+          <span className="hidden text-[13px] whitespace-nowrap md:inline">
+            Mon Sep 14 10:04 PM
+          </span>
         </div>
       </div>
       <p className="mt-4 text-center text-sm text-muted">
