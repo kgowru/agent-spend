@@ -247,9 +247,6 @@ function MenuBarStrip() {
           </span>
         </div>
       </div>
-      <p className="mt-4 text-center text-sm text-muted">
-        Always visible. Updates while you work.
-      </p>
     </div>
   );
 }
@@ -267,7 +264,7 @@ function Tile({ shot }: { shot: Shot }) {
        * stretching to the bento row's height left a void under the shorter
        * panes.
        */}
-      <div className="relative overflow-hidden rounded-2xl">
+      <div className="relative flex-1 overflow-hidden rounded-2xl">
         {/* Announced as a single described graphic. The markup underneath is
          * real text, but read out it is a wall of demo figures; the summary is
          * what a listener actually wants from an illustration. */}
@@ -308,17 +305,14 @@ export function Showcase() {
 
       <MenuBarStrip />
 
-      {/* `items-start` so a tile ends under its own caption. Stretching them to
-       * the row's height left a slab of empty glass below the shorter ones. */}
-      <div className="mt-14 grid items-start gap-5 md:grid-cols-6">
+      {/* Tiles stretch to the row's height. The screens fill that height with
+       * the app's own surface, so a shorter pane reads as the app having
+       * nothing more to show rather than as a gap in the layout. */}
+      <div className="mt-14 grid gap-5 md:grid-cols-6">
         {SHOTS.map((shot) => (
           <Tile key={shot.key} shot={shot} />
         ))}
       </div>
-
-      <p className="mt-12 text-center text-sm text-muted/80">
-        Example figures from a demo dataset. Yours come from your own logs.
-      </p>
     </section>
   );
 }

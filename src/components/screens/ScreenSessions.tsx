@@ -74,6 +74,12 @@ const SESSIONS: Session[] = [
     wh: "39 Wh",
     meta: ["8:11 AM", "feat/rate-limits", "opus-4-8 +2", "20 req", "2 subagent"],
   },
+  {
+    project: "design-system",
+    usd: "$1.07",
+    wh: "51 Wh",
+    meta: ["6:57 AM", "main", "sonnet-5 +2", "14 req", "2 subagent"],
+  },
 ];
 
 export function ScreenSessions() {

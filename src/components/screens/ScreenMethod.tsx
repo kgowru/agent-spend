@@ -53,6 +53,21 @@ const COL = {
   share: "w-[44px] sm:w-[54px]",
 } as const;
 
+/** The assumptions under the model, each with the reason it holds. */
+const COEFFICIENTS = [
+  {
+    name: "output : input energy",
+    value: "4×",
+    why: "Prefill is one parallel GEMM (compute-bound); decode streams every weight from HBM per token (bandwidth-bound).",
+  },
+  {
+    name: "cache write",
+    value: "1.00×",
+    why: "A write performs a full prefill pass.",
+  },
+  { name: "boundary", value: "full datacenter", why: "" },
+];
+
 export function ScreenMethod() {
   return (
     <Screen className="gap-[14px] p-4">
@@ -108,6 +123,26 @@ export function ScreenMethod() {
       <p className="truncate text-[11px]" style={{ color: C.tertiary }}>
         Coefficients are tier estimates anchored to published per-query measurement…
       </p>
+
+      {/* Every assumption the model rests on, each with the reason for it. */}
+      <div className="mt-auto flex flex-col gap-[6px]">
+        <Label>Coefficients</Label>
+        {COEFFICIENTS.map((c) => (
+          <div key={c.name} className="flex flex-col">
+            <div className="flex items-baseline gap-2 text-[12px]">
+              <span className="min-w-0 flex-1 truncate">{c.name}</span>
+              <span className="shrink-0" style={NUM}>
+                {c.value}
+              </span>
+            </div>
+            {c.why ? (
+              <p className="text-[11px]" style={{ color: C.secondary }}>
+                {c.why}
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
     </Screen>
   );
 }

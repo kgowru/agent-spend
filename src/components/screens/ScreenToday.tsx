@@ -142,6 +142,57 @@ export function ScreenToday() {
           </div>
         ))}
       </div>
+
+      {/* The rest of the pane: the period's shape in one line, then Home's own
+       * strip of today's advice, then the caveat that applies to every figure
+       * above it. `mt-auto` pins this to the bottom when the tile is taller
+       * than the content. */}
+      <div className="mt-auto flex flex-col gap-[14px] pt-[14px]">
+        <Rule />
+        <div
+          className="flex items-baseline justify-between gap-3 text-[12px]"
+          style={{ color: C.secondary }}
+        >
+          <span>14 active days</span>
+          <span style={NUM}>$6.25 · 300 Wh per active day</span>
+        </div>
+
+        <Rule />
+
+        <div className="flex flex-col gap-[7px]">
+          <div className="flex items-baseline justify-between gap-3">
+            <Label>Worth a look today</Label>
+            <span className="text-[11px]" style={{ color: C.blue }}>
+              all savings ›
+            </span>
+          </div>
+          <div
+            className="rounded-md px-2 py-[5px]"
+            style={{ background: C.inset }}
+          >
+            <div className="flex items-baseline gap-[6px]">
+              <span className="min-w-0 flex-1 text-[12px] font-medium">
+                Try Sonnet 5 as the default, reserving Opus/Fable for hard work
+              </span>
+              <span
+                className="shrink-0 text-[12px]"
+                style={{ color: C.green, ...NUM }}
+              >
+                ~$0.61
+              </span>
+            </div>
+            <p className="mt-[2px] text-[11px]" style={{ color: C.secondary }}>
+              77% of your spend ($6.07) is on top-tier models. Sonnet 5 is
+              roughly half the energy and a third of the price per token.
+            </p>
+          </div>
+        </div>
+
+        <p className="text-[11px]" style={{ color: C.tertiary }}>
+          Cost is exact, from published rates. Energy is a modelled estimate and
+          was consumed in a datacenter, not on your Mac.
+        </p>
+      </div>
     </Screen>
   );
 }

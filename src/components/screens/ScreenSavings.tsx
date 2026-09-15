@@ -35,6 +35,61 @@ function Chevron() {
   );
 }
 
+/** One ranked recommendation: action, then the evidence, then the caveat the
+ *  logs cannot settle on their own. */
+function Rec({
+  rank,
+  title,
+  saving,
+  evidence,
+}: {
+  rank: string;
+  title: string;
+  saving?: string;
+  evidence: string;
+}) {
+  return (
+    <div className="rounded-md p-[10px]" style={{ background: C.inset }}>
+      <div className="flex items-baseline gap-[6px]">
+        <span
+          className="w-[12px] shrink-0 text-right text-[11px]"
+          style={{ color: C.secondary, ...NUM }}
+        >
+          {rank}
+        </span>
+        <span className="min-w-0 flex-1 text-[13px] font-medium">{title}</span>
+        {saving ? (
+          <span
+            className="shrink-0 text-[11px]"
+            style={{ color: C.green, ...NUM }}
+          >
+            {saving}
+          </span>
+        ) : null}
+      </div>
+
+      <p className="mt-[5px] pl-[18px] text-[11px]" style={{ color: C.secondary }}>
+        {evidence}
+      </p>
+
+      <div
+        className="mt-[5px] flex items-center gap-[3px] pl-[18px] text-[11px]"
+        style={{ color: C.tertiary }}
+      >
+        <Chevron />
+        <span>caveat</span>
+      </div>
+    </div>
+  );
+}
+
+/** The ceiling: what the whole history would have cost on a single model. */
+const REPLAY = [
+  { model: "opus-4-8", energy: "1.19× energy", delta: "+$82", saves: false },
+  { model: "sonnet-5", energy: "0.59× energy", delta: "−$168", saves: true },
+  { model: "haiku-4-5", energy: "0.20× energy", delta: "−$417", saves: true },
+];
+
 export function ScreenSavings() {
   return (
     <Screen className="gap-[14px] p-4">
@@ -61,42 +116,44 @@ export function ScreenSavings() {
         Ranked across your whole history, the patterns, not today.
       </p>
 
-      {/* One ranked recommendation: action, then the evidence, then the
-          caveat the logs cannot settle on their own. */}
-      <div className="rounded-md p-[10px]" style={{ background: C.inset }}>
-        <div className="flex items-baseline gap-[6px]">
-          <span
-            className="w-[12px] shrink-0 text-right text-[11px]"
-            style={{ color: C.secondary, ...NUM }}
-          >
-            1
-          </span>
-          <span className="min-w-0 flex-1 text-[13px] font-medium">
-            Try Sonnet 5 as the default, reserving Opus/Fable for hard work
-          </span>
-          <span
-            className="shrink-0 text-[11px]"
-            style={{ color: C.green, ...NUM }}
-          >
-            ~$45
-          </span>
-        </div>
+      <div className="flex flex-col gap-2">
+        <Rec
+          rank="1"
+          title="Try Sonnet 5 as the default, reserving Opus/Fable for hard work"
+          saving="~$45"
+          evidence="82% of your spend ($445) is on top-tier models. Sonnet 5 is roughly half the energy and a third of the price per token."
+        />
+        <Rec
+          rank="2"
+          title="Most of your spend is one project, storefront"
+          evidence="$174 of $542 (32%) and 8.4 kWh."
+        />
+      </div>
 
-        <p
-          className="mt-[5px] pl-[18px] text-[11px]"
-          style={{ color: C.secondary }}
-        >
-          82% of your spend ($445) is on top-tier models. Sonnet 5 is roughly
-          half the energy and a third of the price per token.
+      {/* The ceiling the recommendations are measured against. */}
+      <div className="mt-auto flex flex-col gap-1">
+        <Label>Whole history replayed on one model</Label>
+        {REPLAY.map((r) => (
+          <div key={r.model} className="flex items-baseline gap-2 text-[12px]">
+            <span className="min-w-0 flex-1 truncate">{r.model}</span>
+            <span
+              className="shrink-0"
+              style={{ color: r.saves ? C.green : C.secondary, ...NUM }}
+            >
+              {r.energy}
+            </span>
+            <span
+              className="w-[46px] shrink-0 text-right"
+              style={{ color: r.saves ? C.green : C.primary, ...NUM }}
+            >
+              {r.delta}
+            </span>
+          </div>
+        ))}
+        <p className="mt-1 text-[11px]" style={{ color: C.tertiary }}>
+          A ceiling, not a plan. Nobody should run everything on one model, and
+          a weaker model that needs more turns gives the saving back.
         </p>
-
-        <div
-          className="mt-[5px] flex items-center gap-[3px] pl-[18px] text-[11px]"
-          style={{ color: C.tertiary }}
-        >
-          <Chevron />
-          <span>caveat</span>
-        </div>
       </div>
     </Screen>
   );
