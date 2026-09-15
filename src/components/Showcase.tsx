@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { MenuBarClock } from "./MenuBarClock";
 import { ScreenToday } from "./screens/ScreenToday";
 import { ScreenSavings } from "./screens/ScreenSavings";
 import { ScreenSessions } from "./screens/ScreenSessions";
@@ -242,8 +243,8 @@ function MenuBarStrip() {
           <span className="hidden sm:block">
             <ControlCentre />
           </span>
-          <span className="hidden text-[13px] whitespace-nowrap md:inline">
-            Mon Sep 14 10:04 PM
+          <span className="hidden md:inline">
+            <MenuBarClock />
           </span>
         </div>
       </div>
