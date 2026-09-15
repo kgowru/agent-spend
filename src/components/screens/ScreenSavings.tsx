@@ -100,22 +100,9 @@ export function ScreenSavings() {
         <Label tone={C.tertiary}>against $542 spent to date</Label>
       </div>
 
-      {/* Energy, anchored to something physical. */}
-      <div className="flex flex-col gap-px">
-        <Label>Energy to date</Label>
-        <div
-          className="text-[20px] leading-[1.2] font-medium tracking-[-0.01em]"
-          style={NUM}
-        >
-          26.1 kWh
-        </div>
-        <Label tone={C.tertiary}>≈ 22 hours of a typical US home</Label>
-      </div>
-
-      <p className="text-[11px]" style={{ color: C.secondary }}>
-        Ranked across your whole history, the patterns, not today.
-      </p>
-
+      {/* The ranked suggestions themselves, which is what this tile is for.
+       *  The pane's energy block sits below them in the app; here it would eat
+       *  the crop and push every suggestion under the fade. */}
       <div className="flex flex-col gap-2">
         <Rec
           rank="1"
@@ -125,6 +112,17 @@ export function ScreenSavings() {
         />
         <Rec
           rank="2"
+          title="Move work that doesn't need opus-4-8 to sonnet-5"
+          saving="~$28"
+          evidence="opus-4-8 cost you $445 across 1,046 requests. The same tokens on sonnet-5 would be $91."
+        />
+        <Rec
+          rank="3"
+          title="Split long sessions in api-gateway"
+          evidence="Averaged 118k of prompt per request across 214 requests, against a 34.2k median across your sessions."
+        />
+        <Rec
+          rank="4"
           title="Most of your spend is one project, storefront"
           evidence="$174 of $542 (32%) and 8.4 kWh."
         />

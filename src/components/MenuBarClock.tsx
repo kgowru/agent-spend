@@ -42,9 +42,13 @@ export function MenuBarClock() {
   const second = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   /* Reserves the row so the strip does not resize as the digits change or when
-   * the clock first appears. */
+   * the clock first appears. `leading-none` keeps the text box the height of
+   * the digits, so the strip centres it on the same line as the icons beside
+   * it rather than on a taller line box. `block` so the width reservation and
+   * right alignment actually take: both are ignored on an inline box, which is
+   * what a bare span is. */
   const shell =
-    "min-w-[132px] text-right text-[13px] whitespace-nowrap tabular-nums";
+    "block min-w-[132px] text-right text-[13px] leading-none whitespace-nowrap tabular-nums";
 
   if (!second) return <span className={shell} />;
 

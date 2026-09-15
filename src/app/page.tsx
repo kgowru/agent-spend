@@ -1,6 +1,5 @@
 import { Nav } from "@/components/Nav";
 import { Hero } from "@/components/Hero";
-import { ProofPanel } from "@/components/ProofPanel";
 import { Showcase } from "@/components/Showcase";
 import { Download } from "@/components/Download";
 import { Trust } from "@/components/Trust";
@@ -14,7 +13,6 @@ export default function Home() {
       <Nav />
       <main id="main" className="flex-1">
         <Hero />
-        <ProofPanel />
         <Showcase />
         <Download />
         <Trust />

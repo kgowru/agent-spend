@@ -1,10 +1,10 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 import { MenuBarClock } from "./MenuBarClock";
+import { C } from "./screens/chrome";
 import { ScreenToday } from "./screens/ScreenToday";
 import { ScreenSavings } from "./screens/ScreenSavings";
 import { ScreenSessions } from "./screens/ScreenSessions";
-import { ScreenMethod } from "./screens/ScreenMethod";
 
 /*
  * Product screens, rebuilt as HTML rather than shipped as screenshots. A raster
@@ -36,34 +36,26 @@ const SHOTS: Shot[] = [
   {
     key: "today",
     screen: <ScreenToday />,
-    title: "Today, and the days behind it",
+    title: "Daily spend",
     body: "The headline is what you have spent and the energy behind it. Under it, every day ranked, so a heavy session is obvious the moment it lands.",
     alt: "The AgentSpend home pane: a 14 day total of $87, a bar chart of daily cost, and a per day table of cost, energy and request counts.",
-    span: "md:col-span-4",
+    span: "md:col-span-3",
   },
   {
     key: "savings",
     screen: <ScreenSavings />,
-    title: "What it would save you",
+    title: "Suggested savings",
     body: "Ranked over your whole history, not just today. Each suggestion carries the number it is worth and the caveat that comes with it.",
-    alt: "The savings pane: up to $45 identified, and a recommendation to default to Sonnet 5 while reserving the top tier for hard work.",
-    span: "md:col-span-2",
+    alt: "The savings pane: up to $45 identified, then ranked suggestions, each with what it is worth and the evidence behind it.",
+    span: "md:col-span-3",
   },
   {
     key: "sessions",
     screen: <ScreenSessions />,
-    title: "Session by session",
+    title: "Session spend",
     body: "Which project, which branch, which model, and what the run cost.",
-    alt: "The sessions pane: a by hour histogram and a list of sessions with project, branch, model, request count and cost.",
-    span: "md:col-span-3",
-  },
-  {
-    key: "method",
-    screen: <ScreenMethod />,
-    title: "Every coefficient, in the open",
-    body: "The energy model is a model. The app ships its per model baselines and sources so you can read them, and argue with them.",
-    alt: "The methodology pane: a per model baseline table of watt hours per 1k input and output tokens, with each model's token share.",
-    span: "md:col-span-3",
+    alt: "The sessions pane: a list of sessions with project, branch, model, request count and cost.",
+    span: "md:col-span-6",
   },
 ];
 
@@ -75,12 +67,26 @@ const SHOTS: Shot[] = [
  */
 const SCREEN_H = 248;
 
-/* The crop runs out rather than stopping on a cut line, which is what says
- * there is more pane below. */
+/*
+ * The crop runs out rather than stopping on a cut line, which is what says
+ * there is more pane below.
+ *
+ * The gradient is sized to the element's own box, so the element this sits on
+ * has to be exactly the crop height — on an auto-height wrapper the whole fade
+ * lands below the visible window and the crop reads as a hard cut. `no-repeat`
+ * plus an explicit size stops the gradient tiling down over content that
+ * overflows the box.
+ */
+const FADE_GRADIENT =
+  "linear-gradient(to bottom, #000 0%, #000 58%, rgb(0 0 0 / 0.55) 82%, transparent 100%)";
+
 const SCREEN_FADE = {
-  maskImage: "linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%)",
-  WebkitMaskImage:
-    "linear-gradient(to bottom, #000 0%, #000 62%, transparent 100%)",
+  maskImage: FADE_GRADIENT,
+  WebkitMaskImage: FADE_GRADIENT,
+  maskRepeat: "no-repeat",
+  WebkitMaskRepeat: "no-repeat",
+  maskSize: "100% 100%",
+  WebkitMaskSize: "100% 100%",
 } as const;
 
 /* The frame's hairline, fading out as it descends so the screen sits in
@@ -99,7 +105,7 @@ const FADING_BORDER = {
  */
 function DotGrid() {
   return (
-    <svg viewBox="0 0 16 16" fill="currentColor" className="size-[15px]">
+    <svg viewBox="0 0 16 16" fill="currentColor" className="block size-[15px]">
       {[4, 8, 12].map((y) =>
         [4, 8, 12].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.25" />),
       )}
@@ -109,7 +115,7 @@ function DotGrid() {
 
 function CheckCircle() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" className="size-[15px]">
+    <svg viewBox="0 0 16 16" fill="none" className="block size-[15px]">
       <circle cx="8" cy="8" r="6.4" stroke="currentColor" strokeWidth="1.35" />
       <path
         d="m5.2 8.2 2 2 3.6-4"
@@ -124,7 +130,7 @@ function CheckCircle() {
 
 function Cloud() {
   return (
-    <svg viewBox="0 0 18 16" fill="none" className="size-[16px]">
+    <svg viewBox="0 0 18 16" fill="none" className="block size-[16px]">
       <path
         d="M4.9 12.2h7.6a2.9 2.9 0 0 0 .3-5.8 4.1 4.1 0 0 0-7.8-.9 3.35 3.35 0 0 0-.1 6.7Z"
         stroke="currentColor"
@@ -137,7 +143,7 @@ function Cloud() {
 
 function Battery() {
   return (
-    <svg viewBox="0 0 27 16" fill="none" className="h-[14px] w-[25px]">
+    <svg viewBox="0 0 27 16" fill="none" className="block h-[14px] w-[25px]">
       <rect
         x="0.6"
         y="3.6"
@@ -160,8 +166,12 @@ function Battery() {
 }
 
 function Wifi() {
+  /* The arcs top out around y 3.05 and the dot bottoms out at 14.65, so the
+   * glyph's own centre is ~0.85 below the viewBox centre. Offsetting the
+   * viewBox by that much centres the mark optically, rather than centring a
+   * box the mark does not fill evenly. */
   return (
-    <svg viewBox="0 0 18 16" fill="none" className="size-[16px]">
+    <svg viewBox="0 0.85 18 16" fill="none" className="block size-[16px]">
       <path
         d="M1.6 6.1a10.5 10.5 0 0 1 14.8 0M4.2 8.8a6.8 6.8 0 0 1 9.6 0M6.8 11.5a3.1 3.1 0 0 1 4.4 0"
         stroke="currentColor"
@@ -175,7 +185,7 @@ function Wifi() {
 
 function ControlCentre() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" className="size-[15px]">
+    <svg viewBox="0 0 16 16" fill="none" className="block size-[15px]">
       <rect x="1.4" y="2.6" width="13.2" height="4.6" rx="2.3" stroke="currentColor" strokeWidth="1.2" opacity="0.65" />
       <rect x="1.4" y="8.8" width="13.2" height="4.6" rx="2.3" stroke="currentColor" strokeWidth="1.2" opacity="0.65" />
       <circle cx="10.6" cy="4.9" r="1.35" fill="currentColor" />
@@ -186,7 +196,7 @@ function ControlCentre() {
 
 function Search() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" className="size-[15px]">
+    <svg viewBox="0 0 16 16" fill="none" className="block size-[15px]">
       <circle cx="7.2" cy="7.2" r="4.6" stroke="currentColor" strokeWidth="1.35" />
       <path d="m10.7 10.7 3 3" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
     </svg>
@@ -250,7 +260,12 @@ function MenuBarStrip() {
           aria-hidden="true"
           className="flex items-center justify-start gap-3 text-ink/45"
         >
-          <span className="hidden text-[13px] tracking-tight sm:inline">91%</span>
+          {/* `leading-none`: the row centres each item's box, and a default
+            * line box is taller than the digits it holds, which would sit the
+            * text off the icons' centre line. */}
+          <span className="hidden text-[13px] leading-none tracking-tight sm:inline">
+            91%
+          </span>
           <Battery />
           <Wifi />
           <span className="hidden sm:block">
@@ -287,9 +302,22 @@ function Tile({ shot }: { shot: Shot }) {
       >
         {/* Announced as a single described graphic. The markup underneath is
          * real text, but read out it is a wall of demo figures; the summary is
-         * what a listener actually wants from an illustration. */}
-        <div role="img" aria-label={shot.alt} style={SCREEN_FADE}>
-          {shot.screen}
+         * what a listener actually wants from an illustration.
+         *
+         * Pinned to the crop box (rather than left to size to its content) so
+         * the fade gradient spans the visible height — see SCREEN_FADE. It
+         * carries the app surface too, so a pane with less content than the
+         * crop still reads as app rather than as a gap in the tile. */}
+        <div
+          role="img"
+          aria-label={shot.alt}
+          className="absolute inset-0 overflow-hidden"
+          style={{ ...SCREEN_FADE, background: C.surface }}
+        >
+          {/* Left at its natural height: `Screen` is a column flex container,
+           * so handing it a definite height would let overflowing rows shrink
+           * to fit instead of running out of frame under the fade. */}
+          <div className="absolute inset-x-0 top-0">{shot.screen}</div>
         </div>
         <div
           aria-hidden="true"
@@ -319,9 +347,6 @@ export function Showcase() {
       >
         A menu bar away
       </h2>
-      <p className="mx-auto mt-4 max-w-2xl text-center text-lg/8 text-pretty text-muted">
-        One click from the menu bar. Here is what it shows you.
-      </p>
 
       <MenuBarStrip />
 
