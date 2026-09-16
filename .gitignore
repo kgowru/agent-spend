@@ -50,3 +50,8 @@ __pycache__/
 
 # icon build intermediate
 mac/assets/*.iconset/
+
+# Agent scratch space. Holds screenshots of a live store, which carry real
+# project names and real spend, so it must never be committed. Previously only
+# covered by .git/info/exclude, which is per-clone and never travels.
+.context/
