@@ -174,7 +174,11 @@ export function MetalButton({
           theme="dark"
           strength={strength}
           paused={strength === 0}
-          className="rounded-full"
+          /* `grow`, so a full-width shell (the phone CTA) carries the metal
+           * out to its own ring instead of leaving it hugging the label with
+           * the outline stranded around it. Nothing to grow into when the
+           * shell sizes to its content, so the inline case is unchanged. */
+          className="grow rounded-full"
         >
           {children}
         </MetalFx>

@@ -137,7 +137,9 @@
   .glow-orbit {
     position: absolute;
     top: 23%;
-    left: 50%;
+    /* Set by whoever renders the field, so the light can pool wherever the
+     * layout wants it rather than always at dead centre. */
+    left: var(--glow-x, 50%);
     width: 0;
     height: 0;
     --glow-size: 19rem;
@@ -225,7 +227,7 @@
     position: absolute;
     inset: 0;
     background: radial-gradient(
-      36% 32% at 50% 23%,
+      36% 32% at var(--glow-x, 50%) 23%,
       rgb(25 66 205 / 0.17) 0%,
       rgb(25 66 205 / 0.132) 22%,
       rgb(25 66 205 / 0.086) 44%,
