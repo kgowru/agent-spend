@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { GlowField } from "./GlowField";
+import { HeroPreview } from "./HeroPreview";
 import { MetalButton } from "./MetalButton";
 import { BLOG_URL, DOWNLOAD_URL } from "@/lib/site";
 
@@ -14,7 +15,20 @@ const PLATE_RADIUS = "22.4%";
 
 function IconPlate() {
   return (
-    <div className="relative mx-auto w-36 sm:w-48 md:w-56">
+    /*
+     * Pulled left by its own padding. The PNG carries PLATE_INSET of
+     * transparent margin on every side, so left to sit at the column's edge
+     * the squircle lands that far inboard and reads as indented against the
+     * headline under it. The width goes through a variable because the offset
+     * has to be a fraction of the icon's own width — a percentage margin would
+     * resolve against the column instead.
+     */
+    <div
+      className="relative w-[var(--icon-w)] [--icon-w:6rem] sm:[--icon-w:7rem]"
+      style={{
+        marginLeft: `calc(var(--icon-w) * -${parseFloat(PLATE_INSET) / 100})`,
+      }}
+    >
       <div className="relative">
         <Image
           src="/agentspend-icon.png"
@@ -22,7 +36,7 @@ function IconPlate() {
           width={1024}
           height={1024}
           priority
-          sizes="(min-width: 768px) 224px, (min-width: 640px) 192px, 144px"
+          sizes="(min-width: 640px) 112px, 96px"
           className="w-full"
           // drop-shadow follows the PNG's alpha, so the glow hugs the squircle
           // rather than a bounding box. That is what reads as a lit object.
@@ -64,7 +78,7 @@ function IconPlate() {
           alt=""
           width={1024}
           height={1024}
-          sizes="(min-width: 768px) 224px, (min-width: 640px) 192px, 144px"
+          sizes="(min-width: 640px) 112px, 96px"
           className="w-full -scale-y-100"
         />
       </div>
@@ -75,57 +89,74 @@ function IconPlate() {
 export function Hero() {
   return (
     <section className="relative isolate overflow-hidden">
-      <GlowField />
+      {/* Pooled over the pitch, which is where the eye starts now that the
+       * copy has flushed left and the product holds the right. */}
+      <GlowField className="lg:[--glow-x:28%]" />
 
-      <div className="relative mx-auto max-w-3xl px-6 pt-20 pb-24 text-center sm:pt-28">
-        <IconPlate />
+      {/* Two columns from lg: the pitch, and the thing itself. */}
+      <div className="relative mx-auto grid max-w-6xl items-center gap-16 px-6 pt-20 pb-24 sm:pt-28 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-12">
+        <div>
+          <IconPlate />
 
-        {/* Clears the floor reflection, which is as tall as the icon. */}
-        <h1 className="mt-32 text-4xl font-semibold tracking-tight text-balance sm:mt-36 sm:text-5xl md:text-6xl">
-          Understand your AgentSpend
-        </h1>
+          {/* Just clears the floor reflection, which runs to a little under
+           * half the icon's height below it before the mask takes it to
+           * nothing. Any more than that and the icon reads as detached from
+           * the sentence it belongs to. */}
+          <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:mt-8 sm:text-5xl md:text-6xl">
+            Understand your AgentSpend
+          </h1>
 
-        <p className="mx-auto mt-6 max-w-2xl text-lg/8 text-pretty text-muted">
-          AgentSpend sits in your menu bar and shows what your Claude Code usage
-          costs in dollars. Plus, an estimate of the energy in kWh behind the
-          usage. It updates while you work and proactively teaches you habits to
-          reduce your spend.
-        </p>
+          <p className="mt-6 max-w-xl text-lg/8 text-pretty text-muted">
+            AgentSpend sits in your menu bar and shows what your Claude Code usage
+            costs in dollars. Plus, an estimate of the energy in kWh behind the
+            usage. It updates while you work and proactively teaches you habits to
+            reduce your spend.
+          </p>
 
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <a
-            href={BLOG_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 px-7 py-3.5 text-base font-medium text-ink transition-colors duration-300 ease-out hover:border-white/35 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft sm:w-auto"
-          >
-            Read the write-up
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 16 16"
-              fill="none"
-              className="size-3.5 opacity-60"
-            >
-              <path
-                d="M6 2h8v8M14 2 3 13"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </a>
-          <MetalButton className="w-full sm:w-auto" alwaysOn>
+          <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <a
-              href={DOWNLOAD_URL}
-              className="w-full rounded-full px-7 py-3.5 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft sm:w-auto"
+              href={BLOG_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 px-7 py-3.5 text-base font-medium text-ink transition-colors duration-300 ease-out hover:border-white/35 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft sm:w-auto"
             >
-              Download for macOS
+              Read the write-up
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                fill="none"
+                className="size-3.5 opacity-60"
+              >
+                <path
+                  d="M6 2h8v8M14 2 3 13"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </a>
-          </MetalButton>
+            <MetalButton className="w-full sm:w-auto" alwaysOn>
+              <a
+                href={DOWNLOAD_URL}
+                /* `text-center` for the phone, where the button goes full
+                 * width: the pitch around it is flush left now, so the label
+                 * no longer inherits any centring. */
+                className="w-full rounded-full px-7 py-3.5 text-center text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft sm:w-auto"
+              >
+                Download for macOS
+              </a>
+            </MetalButton>
+          </div>
+
+          <p className="mt-6 text-sm text-muted">Free and MIT licensed.</p>
         </div>
 
-        <p className="mt-6 text-sm text-muted">Free and MIT licensed.</p>
+        {/* Only where there is a column for it. Stacked under the pitch it
+         * added 540pt of hero above the fold, which pushed the section that
+         * explains the window off screen — and the showcase covers the panes a
+         * couple of screens down regardless. */}
+        <HeroPreview className="hidden lg:block" />
       </div>
     </section>
   );

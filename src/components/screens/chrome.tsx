@@ -58,6 +58,27 @@ export function Screen({
   );
 }
 
+/**
+ * Crops a pane so it runs out under a fade rather than stopping on a cut line,
+ * which is what says there is more pane below.
+ *
+ * The gradient is sized to the element's own box, so whatever this lands on has
+ * to be exactly the crop height — on an auto-height wrapper the whole fade
+ * sits below the visible window and the crop reads as a hard cut. `no-repeat`
+ * plus an explicit size stops the gradient tiling down over content that
+ * overflows the box.
+ */
+export function fadeMask(gradient: string): CSSProperties {
+  return {
+    maskImage: gradient,
+    WebkitMaskImage: gradient,
+    maskRepeat: "no-repeat",
+    WebkitMaskRepeat: "no-repeat",
+    maskSize: "100% 100%",
+    WebkitMaskSize: "100% 100%",
+  };
+}
+
 export function Rule({ className = "" }: { className?: string }) {
   return <div className={`h-px w-full ${className}`} style={{ background: C.rule }} />;
 }
