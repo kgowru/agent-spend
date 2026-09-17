@@ -83,6 +83,50 @@ export function Rule({ className = "" }: { className?: string }) {
   return <div className={`h-px w-full ${className}`} style={{ background: C.rule }} />;
 }
 
+/**
+ * The scope picker a pane carries above its figures: AppKit's segmented control
+ * in dark mode, a sunken track with the selected segment raised out of it. The
+ * app sizes these to their contents and leaves them flush left rather than
+ * stretching them across the pane.
+ *
+ * A depiction, not a control. The panes are illustrations; the one picker on
+ * the page that actually does something is the window's own tab bar, which
+ * PreviewTabs builds out of buttons.
+ */
+export function Segmented({
+  options,
+  selected,
+}: {
+  options: readonly string[];
+  selected: string;
+}) {
+  return (
+    <div
+      className="flex h-[22px] shrink-0 items-stretch gap-[1px] self-start rounded-[7px] p-[1px]"
+      style={{ background: "#2c2c2c" }}
+    >
+      {options.map((option) => (
+        <div
+          key={option}
+          className="flex items-center justify-center rounded-[6px] px-[13px] text-[12px]"
+          style={
+            option === selected
+              ? {
+                  background: "#4c4c4c",
+                  color: "#ffffff",
+                  boxShadow:
+                    "inset 0 1px 0 0 rgb(255 255 255 / 0.10), 0 1px 2px 0 rgb(0 0 0 / 0.35)",
+                }
+              : { color: C.primary }
+          }
+        >
+          {option}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** A small caps-ish label, the app's `.caption` in secondary. */
 export function Label({
   children,

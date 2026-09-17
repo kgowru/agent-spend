@@ -5,10 +5,9 @@ import { C, Headline, Label, NUM, Screen } from "./chrome";
  * InsightsView (mac/AgentSpend/UI/InsightsView.swift).
  *
  * Structure follows the SwiftUI view: two headline blocks (money, then the
- * energy behind it) each a caption / figure / footnote stack, the line that
- * says what separates this pane from Home's strip, then the ranked
- * recommendation cards. The figures are the synthetic demo store's, the same
- * ones the capture showed.
+ * energy behind it) each a caption / figure / footnote stack, then the ranked
+ * recommendation cards, then the ceiling they are measured against. The figures
+ * are the synthetic demo store's, the same ones the capture showed.
  *
  * The app's pane is a fixed 396pt column; this one reflows, so the card's
  * title and evidence wrap to whatever width the tile gives them while the
@@ -100,9 +99,22 @@ export function ScreenSavings() {
         <Label tone={C.tertiary}>against $542 spent to date</Label>
       </div>
 
-      {/* The ranked suggestions themselves, which is what this tile is for.
-       *  The pane's energy block sits below them in the app; here it would eat
-       *  the crop and push every suggestion under the fade. */}
+      {/* The same history in the other unit, anchored to something physical.
+       *  26.2 kWh is the $542 above at the store's own rate, the one the
+       *  storefront line further down quotes as $174 to 8.4 kWh, and 29 kWh a
+       *  day is the US home the app compares against (energy-model.json). */}
+      <div className="flex flex-col gap-px">
+        <Label>Energy to date</Label>
+        <div
+          className="text-[17px] leading-[1.2] font-medium"
+          style={{ color: C.primary, ...NUM }}
+        >
+          26.2 kWh
+        </div>
+        <Label tone={C.tertiary}>≈ 22 hours of a typical US home</Label>
+      </div>
+
+      {/* The ranked suggestions themselves, which is what this pane is for. */}
       <div className="flex flex-col gap-2">
         <Rec
           rank="1"

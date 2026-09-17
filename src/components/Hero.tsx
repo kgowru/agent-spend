@@ -108,10 +108,9 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-xl text-lg/8 text-pretty text-muted">
-            AgentSpend sits in your menu bar and shows what your Claude Code usage
-            costs in dollars. Plus, an estimate of the energy in kWh behind the
-            usage. It updates while you work and proactively teaches you habits to
-            reduce your spend.
+            A Mac menu bar app that shows you what your agent usage costs in
+            dollars ($) and energy (kWh). It updates while you work and
+            proactively teaches you habits to reduce your spend.
           </p>
 
           {/* Watched by the header, which stays out of the way while these two

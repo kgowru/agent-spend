@@ -1,9 +1,10 @@
 import { Fragment } from "react";
-import { C, Label, NUM, Rule, Screen } from "./chrome";
+import { C, Label, NUM, Rule, Screen, Segmented } from "./chrome";
 
 /*
- * The sessions pane, rebuilt as HTML from the app's own SessionsView: every run
- * with what it cost, on which branch, with which model.
+ * The sessions pane, rebuilt as HTML from the app's own SessionsView: the scope
+ * picker, when today's work happened, then every run with what it cost, on
+ * which branch, with which model.
  *
  * Geometry and colour were measured off a real `AgentSpend --render` capture of
  * this pane, so this matches the app rather than approximating it. Rerun
@@ -11,6 +12,9 @@ import { C, Label, NUM, Rule, Screen } from "./chrome";
  * this against it. The figures come from the synthetic demo store
  * (tools/seed-demo-store.py), which is what the capture showed too.
  */
+
+/** The app opens on Today, which is the scope the rows below are listed at. */
+const SCOPES = ["Today", "3 days", "7 days"] as const;
 
 type Session = {
   project: string;
@@ -53,9 +57,70 @@ const SESSIONS: Session[] = [
   },
 ];
 
+/*
+ * When today's work happened, summed off the rows below rather than declared
+ * beside them, so the chart cannot drift from the list it summarises. The app
+ * only draws this at the Today scope, which is the one selected here.
+ */
+const HOURLY = SESSIONS.reduce((hours, session) => {
+  const [clock, meridiem] = session.meta[0].split(" ");
+  const hour = (Number(clock.split(":")[0]) % 12) + (meridiem === "PM" ? 12 : 0);
+  hours[hour] += Number(session.usd.replace("$", ""));
+  return hours;
+}, Array<number>(24).fill(0));
+
+const HOUR_PEAK = Math.max(...HOURLY);
+
+/** The app's 34pt of bar, and its 2pt floor so a quiet hour is still an hour. */
+const HOUR_CHART_H = 34;
+const MIN_BAR = 2;
+
+function HourlyBars() {
+  return (
+    <div className="flex shrink-0 flex-col gap-[3px] pb-[6px]">
+      <Label>By hour</Label>
+
+      <div
+        aria-hidden="true"
+        className="flex items-end gap-px"
+        style={{ height: HOUR_CHART_H }}
+      >
+        {HOURLY.map((usd, hour) => (
+          <div
+            key={hour}
+            className="flex-1 rounded-[1px]"
+            style={{
+              height: Math.max(MIN_BAR, (HOUR_CHART_H * usd) / HOUR_PEAK),
+              background: C.blue,
+              // The app dims an empty hour rather than dropping it, so the day
+              // reads as a day and not as a handful of floating bars.
+              opacity: usd === 0 ? 0.12 : 0.85,
+            }}
+          />
+        ))}
+      </div>
+
+      <div
+        className="flex items-baseline justify-between text-[11px]"
+        style={{ color: C.tertiary, ...NUM }}
+      >
+        <span>00</span>
+        <span>12</span>
+        <span>23</span>
+      </div>
+    </div>
+  );
+}
+
 export function ScreenSessions() {
   return (
     <Screen className="p-4">
+      {/* Scope, then the shape of the day, then the runs themselves. */}
+      <Segmented options={SCOPES} selected="Today" />
+
+      <div className="h-[14px] shrink-0" />
+      <HourlyBars />
+
       <div className="flex items-baseline justify-between gap-3">
         <Label>Sessions, most recent first</Label>
         <span

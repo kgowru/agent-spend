@@ -43,19 +43,19 @@ const PANES: Pane[] = [
     key: "today",
     label: "Home",
     node: <ScreenToday />,
-    alt: "The Home pane: a 14 day total of $87, a bar chart of daily cost, and a table of cost, energy and requests for each day.",
+    alt: "The Home pane on its 14 day window: a total of $87, a bar chart of daily cost, and a table of cost, energy and requests for each day.",
   },
   {
     key: "sessions",
     label: "Sessions",
     node: <ScreenSessions />,
-    alt: "The Sessions pane: each run listed with its project, branch, model, request count and cost.",
+    alt: "The Sessions pane: a chart of when today's work happened, then each run with its project, branch, model, request count and cost.",
   },
   {
     key: "savings",
     label: "Savings",
     node: <ScreenSavings />,
-    alt: "The Savings pane: up to $45 identified, then ranked suggestions, each with what it is worth and the evidence behind it.",
+    alt: "The Savings pane: up to $45 identified against $542 spent, the 26.2 kWh behind it, then ranked suggestions, each with what it is worth and the evidence behind it.",
   },
 ];
 
@@ -134,8 +134,13 @@ export function HeroPreview({ className = "" }: { className?: string }) {
           height: WINDOW_H,
           background: C.surface,
           color: C.primary,
-          boxShadow:
-            "inset 0 1px 0 0 rgb(255 255 255 / 0.07), 0 40px 90px -30px rgb(0 0 0 / 0.9)",
+          /*
+           * One hairline round the window, same as the cards. There used to be
+           * an `inset 0 1px 0 0 rgb(255 255 255 / 0.07)` lit-top-edge here too,
+           * which drew a second line immediately inside the border along the
+           * top: two 1px greys stacked where the other three sides had one.
+           */
+          boxShadow: "0 40px 90px -30px rgb(0 0 0 / 0.9)",
         }}
       >
         <PreviewTabs panes={PANES} contentHeight={CONTENT_H} />
