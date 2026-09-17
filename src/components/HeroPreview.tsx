@@ -6,7 +6,10 @@ import {
   MenuBarItemShot,
   Wifi,
 } from "./menu-bar";
+import { PreviewTabs, type Pane } from "./PreviewTabs";
 import { C, fadeMask, NUM, Rule } from "./screens/chrome";
+import { ScreenSavings } from "./screens/ScreenSavings";
+import { ScreenSessions } from "./screens/ScreenSessions";
 import { ScreenToday } from "./screens/ScreenToday";
 
 /*
@@ -30,50 +33,31 @@ const TABS_H = 42;
 const FOOTER_H = 31;
 const CONTENT_H = WINDOW_H - TABS_H - FOOTER_H - 2;
 
-/* The pane is taller than the scroll view, so the crop has to say so. Held
- * close to the bottom edge, unlike the showcase tiles: there the fade is the
- * end of the card, here it is a scroll view inside a window that continues. */
-const CONTENT_FADE = fadeMask(
-  "linear-gradient(to bottom, #000 0%, #000 84%, rgb(0 0 0 / 0.5) 94%, transparent 100%)",
-);
-
-const TABS = ["Home", "Sessions", "Savings"] as const;
-
 /*
- * AppKit's segmented control in dark mode: a sunken track with the selected
- * segment raised out of it. Eyeballed rather than sampled — the renderer
- * captures panes, not the chrome around them — so it is the one part of this
- * figure that approximates the app instead of matching it.
+ * The three panes behind the picker, the same recreations the showcase uses.
+ * Rendered here, in a server component, and handed to the client one as nodes,
+ * so switching tabs costs a state update rather than a bundle.
  */
-function TabBar() {
-  return (
-    <div className="p-[10px]">
-      <div
-        className="flex h-[22px] items-stretch gap-[1px] rounded-[7px] p-[1px]"
-        style={{ background: "#2c2c2c" }}
-      >
-        {TABS.map((tab, i) => (
-          <div
-            key={tab}
-            className="flex flex-1 items-center justify-center rounded-[6px] text-[12px]"
-            style={
-              i === 0
-                ? {
-                    background: "#4c4c4c",
-                    color: "#ffffff",
-                    boxShadow:
-                      "inset 0 1px 0 0 rgb(255 255 255 / 0.10), 0 1px 2px 0 rgb(0 0 0 / 0.35)",
-                  }
-                : { color: C.primary }
-            }
-          >
-            {tab}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+const PANES: Pane[] = [
+  {
+    key: "today",
+    label: "Home",
+    node: <ScreenToday />,
+    alt: "The Home pane on its 14 day window: a total of $87, a bar chart of daily cost, and a table of cost, energy and requests for each day.",
+  },
+  {
+    key: "sessions",
+    label: "Sessions",
+    node: <ScreenSessions />,
+    alt: "The Sessions pane: a chart of when today's work happened, then each run with its project, branch, model, request count and cost.",
+  },
+  {
+    key: "savings",
+    label: "Savings",
+    node: <ScreenSavings />,
+    alt: "The Savings pane: up to $45 identified against $542 spent, the 26.2 kWh behind it, then ranked suggestions, each with what it is worth and the evidence behind it.",
+  },
+];
 
 /* The app's footer: when it last read your logs on the left, then the metric
  * toggle, Method and Quit. */
@@ -103,8 +87,13 @@ function MenuBarSlice() {
   return (
     /* The dimming is set here and inherited: every neighbour draws in
      * `currentColor`, and our own item is an image, so it stays at full
-     * strength while the company it keeps recedes. */
+     * strength while the company it keeps recedes.
+     *
+     * Described as one graphic: read out, the strip is a run of icon names and
+     * a ticking clock, none of which is the point of it. */
     <div
+      role="img"
+      aria-label="The right-hand end of the macOS menu bar, with the AgentSpend item showing $7.85 for today among the system icons."
       className="flex h-[26px] items-center justify-end gap-3 rounded-lg border-t border-white/10 bg-white/6 px-3 text-ink/45 backdrop-blur-xl"
       style={fadeMask(
         "linear-gradient(to right, transparent, #000 22%, #000 100%)",
@@ -130,15 +119,12 @@ function MenuBarSlice() {
 
 export function HeroPreview({ className = "" }: { className?: string }) {
   return (
-    /* Announced as one described graphic. The markup underneath is real text,
-     * but read out it is a wall of demo figures; the summary is what a listener
-     * wants from an illustration. */
-    <div
-      role="img"
-      aria-label="AgentSpend on macOS: the menu bar item showing $7.85 for today, and the window open beneath it on the Home tab, with a 14 day total of $87, a bar chart of daily cost, and a table of cost, energy and requests per day."
-      className={`w-full ${className}`}
-      style={{ maxWidth: WINDOW_W }}
-    >
+    /* No `role="img"` around the whole figure any more. The picker inside is a
+     * real control now, and anything inside an image is not exposed as one: a
+     * screen reader would read the summary and never reach the tabs. The two
+     * halves are described separately instead, the bar here and the pane in
+     * PreviewTabs, which is also what lets the description follow the tab. */
+    <div className={`w-full ${className}`} style={{ maxWidth: WINDOW_W }}>
       <MenuBarSlice />
 
       {/* The window hangs just under the bar, as the real one does. */}
@@ -148,25 +134,16 @@ export function HeroPreview({ className = "" }: { className?: string }) {
           height: WINDOW_H,
           background: C.surface,
           color: C.primary,
-          boxShadow:
-            "inset 0 1px 0 0 rgb(255 255 255 / 0.07), 0 40px 90px -30px rgb(0 0 0 / 0.9)",
+          /*
+           * One hairline round the window, same as the cards. There used to be
+           * an `inset 0 1px 0 0 rgb(255 255 255 / 0.07)` lit-top-edge here too,
+           * which drew a second line immediately inside the border along the
+           * top: two 1px greys stacked where the other three sides had one.
+           */
+          boxShadow: "0 40px 90px -30px rgb(0 0 0 / 0.9)",
         }}
       >
-        <TabBar />
-        <Rule />
-
-        {/* Definite height, so the fade spans the visible pane — see fadeMask.
-         * The pane inside is left at its natural height: `Screen` is a column
-         * flex container, so a definite height would let the overflowing rows
-         * shrink to fit instead of running out of frame under the fade. */}
-        <div
-          className="relative overflow-hidden"
-          style={{ height: CONTENT_H, ...CONTENT_FADE }}
-        >
-          <div className="absolute inset-x-0 top-0">
-            <ScreenToday />
-          </div>
-        </div>
+        <PreviewTabs panes={PANES} contentHeight={CONTENT_H} />
 
         <Rule />
         <Footer />

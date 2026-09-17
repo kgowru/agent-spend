@@ -11,7 +11,10 @@ export function Faq() {
     <section
       id="faq"
       aria-labelledby="faq-heading"
-      className="mx-auto w-full max-w-3xl scroll-mt-24 px-6 py-20 sm:py-24"
+      /* The same column as the features and trust grids above, so the page
+       * holds one width the whole way down. The answers keep their own narrower
+       * measure below, since a line of prose 976px wide is hard to read. */
+      className="mx-auto w-full max-w-5xl scroll-mt-24 px-6 py-20 sm:py-24"
     >
       <h2
         id="faq-heading"

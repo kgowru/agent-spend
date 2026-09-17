@@ -1,4 +1,4 @@
-import { C, Headline, Label, NUM, Rule, Screen } from "./chrome";
+import { C, Headline, Label, NUM, Rule, Screen, Segmented } from "./chrome";
 
 /*
  * The home pane on its 14 day window: TodayView's `periodSection` plus the
@@ -12,6 +12,10 @@ import { C, Headline, Label, NUM, Rule, Screen } from "./chrome";
  * the "peak $14", the last five match the table rows, and today over their
  * average is the 1.3x the pane reports.
  */
+
+/** The pane's scope picker. 1d swaps the whole body for today's own view; the
+ *  three period windows differ only in how much history they cover. */
+const SCOPES = ["1d", "14d", "30d", "90d"] as const;
 
 /** Daily cost, oldest (Sep 1) to newest (today). */
 const DAILY_USD = [
@@ -53,6 +57,11 @@ const REQS_W = "w-[38px] sm:w-[48px]";
 export function ScreenToday() {
   return (
     <Screen className="gap-4 p-4">
+      {/* The window the rest of the pane is reporting on, so it comes first:
+       * the app puts the picker above the headline precisely so the control
+       * reads as the input to the number under it. 14d is where it opens. */}
+      <Segmented options={SCOPES} selected="14d" />
+
       {/* Period total on the left, today on the right, both label over figure. */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-px">

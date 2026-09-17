@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { HERO_CTA_ID } from "./anchors";
 import { GlowField } from "./GlowField";
 import { HeroPreview } from "./HeroPreview";
 import { MetalButton } from "./MetalButton";
@@ -107,13 +108,17 @@ export function Hero() {
           </h1>
 
           <p className="mt-6 max-w-xl text-lg/8 text-pretty text-muted">
-            AgentSpend sits in your menu bar and shows what your Claude Code usage
-            costs in dollars. Plus, an estimate of the energy in kWh behind the
-            usage. It updates while you work and proactively teaches you habits to
-            reduce your spend.
+            A Mac menu bar app that shows you what your agent usage costs in
+            dollars ($) and energy (kWh). It updates while you work and
+            proactively teaches you habits to reduce your spend.
           </p>
 
-          <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          {/* Watched by the header, which stays out of the way while these two
+           * are on screen and floats in once they are not. */}
+          <div
+            id={HERO_CTA_ID}
+            className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center"
+          >
             <a
               href={BLOG_URL}
               target="_blank"

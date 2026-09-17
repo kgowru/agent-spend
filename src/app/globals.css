@@ -86,6 +86,26 @@
 }
 
 @layer base {
+  /*
+   * Both boxes, and that is the whole point. metal-fx paints each button's halo
+   * on a canvas positioned well outside the button (40 to 90px wider than the
+   * element, scaled to its perimeter). On a phone the nav's Download button sits
+   * 25px from the right edge, so its halo runs past the viewport and widens the
+   * document by 18px, which is the dead strip down the right of the page.
+   *
+   * `overflow-x: hidden` on <body> alone used to be here and did nothing,
+   * because an overflow declared on <body> is propagated up to the viewport and
+   * <body> itself is then treated as `visible`, so it never clips anything. Set
+   * on <html> the propagation happens from there instead, which frees <body> to
+   * apply its own value and actually clip the halo. `clip` over `hidden` so
+   * neither box turns into a scroll container, which would change what any
+   * position-sticky descendant scrolls against.
+   */
+  html,
+  body {
+    overflow-x: clip;
+  }
+
   html {
     color-scheme: dark;
   }
@@ -98,7 +118,6 @@
      * overrode the Geist fonts loaded in layout.tsx. The font now comes from
      * the `font-sans` class on <body>.
      */
-    overflow-x: hidden;
   }
 
   /* Native <details> marker, replaced by an explicit chevron in Faq.tsx. */
@@ -117,9 +136,15 @@
     backdrop-filter: blur(14px) saturate(140%);
     -webkit-backdrop-filter: blur(14px) saturate(140%);
     border: 1px solid rgb(255 255 255 / 0.09);
-    box-shadow:
-      inset 0 1px 0 0 rgb(255 255 255 / 0.14),
-      0 30px 80px -30px rgb(0 0 0 / 0.85);
+    /*
+     * One hairline the whole way round. There used to be an
+     * `inset 0 1px 0 0 rgb(255 255 255 / 0.14)` lit-top-edge highlight in here
+     * as well, which drew a second, brighter line directly inside the border
+     * along the top only: the card's top edge came out 2px of two different
+     * greys while the other three sides stayed a single 1px. Read as a
+     * misprint rather than as light.
+     */
+    box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.85);
   }
 
   /*

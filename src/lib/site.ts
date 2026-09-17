@@ -6,15 +6,33 @@
  */
 
 export const REPO_URL = "https://github.com/kgowru/agent-spend";
-export const DOWNLOAD_URL = `${REPO_URL}/releases/latest`;
+
+/** The release page itself, for people who want the notes and the checksums. */
+export const RELEASES_URL = `${REPO_URL}/releases/latest`;
+
+/*
+ * The download buttons hand over the disk image directly, no stop at the
+ * release page. GitHub redirects `/releases/latest/download/<asset>` to
+ * whichever release is newest, so this never needs bumping on a new version.
+ * The one thing it depends on is the asset staying named AgentSpend.dmg.
+ */
+export const DOWNLOAD_URL = `${REPO_URL}/releases/latest/download/AgentSpend.dmg`;
 export const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
 export const BLOG_URL = "https://kapilgowru.xyz/blog/agent-spend";
 
 /** Buy Me a Coffee link, surfaced as a discreet icon in the footer. */
 export const DONATE_URL = "https://buymeacoffee.com/kapskaps";
 
+/*
+ * Feeds `metadataBase`, so every og:image and canonical URL hangs off it. If it
+ * fell through to localhost in production every link preview would break, so
+ * Vercel's own production hostname sits in the middle as a safety net.
+ */
 export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000");
 
 export const VERSION = "v0.1.1";
 

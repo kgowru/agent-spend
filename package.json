@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "sync-icon": "cp mac/assets/icon-1024.png public/agentspend-icon.png && sips -Z 256 mac/assets/icon-1024.png --out src/app/icon.png"
+    "sync-icon": "cp mac/assets/icon-1024.png public/agentspend-icon.png && sips -Z 256 mac/assets/icon-1024.png --out src/app/icon.png && sips -Z 180 mac/assets/icon-1024.png --out src/app/apple-icon.png"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
