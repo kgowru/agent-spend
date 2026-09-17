@@ -76,9 +76,11 @@ export function Feedback() {
     <section
       id="feedback"
       aria-labelledby="feedback-heading"
-      className="scroll-mt-24 px-6 py-20 sm:py-24"
+      className="mx-auto w-full max-w-5xl scroll-mt-24 px-6 py-20 sm:py-24"
     >
-      <div className="glass mx-auto w-full max-w-[720px] overflow-hidden rounded-3xl">
+      {/* Squares up with the grids and the FAQ above rather than sitting in a
+       * narrower column of its own. */}
+      <div className="glass w-full overflow-hidden rounded-3xl">
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}

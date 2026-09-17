@@ -138,7 +138,7 @@ export function Showcase() {
      * here, since there is no longer a heading to name it. */
     <section
       id="showcase"
-      aria-label="Screens"
+      aria-label="Features"
       className="mx-auto w-full max-w-5xl scroll-mt-24 px-6 py-20 sm:py-28"
     >
       {/* Tiles stretch to the row's height. The screens fill that height with

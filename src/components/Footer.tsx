@@ -1,14 +1,14 @@
 import {
   BLOG_URL,
   DONATE_URL,
-  DOWNLOAD_URL,
   LICENSE_URL,
+  RELEASES_URL,
   REPO_URL,
 } from "@/lib/site";
 
 const LINKS = [
   { label: "GitHub", href: REPO_URL },
-  { label: "Releases", href: DOWNLOAD_URL },
+  { label: "Releases", href: RELEASES_URL },
   { label: "Write-up", href: BLOG_URL },
   { label: "License", href: LICENSE_URL },
 ];

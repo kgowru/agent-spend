@@ -14,15 +14,20 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const TITLE = "AgentSpend, what Claude Code actually costs you";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "AgentSpend, what Claude Code actually costs you",
+    default: TITLE,
     template: "%s · AgentSpend",
   },
   description: TAGLINE,
   applicationName: "AgentSpend",
-  authors: [{ name: "Kapil Gowru" }],
+  authors: [{ name: "Kapil Gowru", url: "https://kapilgowru.xyz" }],
+  creator: "Kapil Gowru",
+  publisher: "Kapil Gowru",
+  category: "technology",
   keywords: [
     "Claude Code",
     "AI cost tracking",
@@ -31,14 +36,31 @@ export const metadata: Metadata = {
     "AI energy use",
   ],
   alternates: { canonical: "/" },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
     type: "website",
     siteName: "AgentSpend",
-    title: "AgentSpend, what Claude Code actually costs you",
+    title: TITLE,
     description: TAGLINE,
     url: "/",
+    locale: "en_US",
   },
+  // The image and its alt text come from opengraph-image.png and
+  // opengraph-image.alt.txt. Next fills in the twitter:* image, title and
+  // description from the Open Graph block, so only the card type is set here.
   twitter: { card: "summary_large_image" },
+  // Names the icon iOS saves to the home screen. `capable: false` keeps it a
+  // normal bookmark instead of launching it as a chromeless web app.
+  appleWebApp: { title: "AgentSpend", capable: false },
 };
 
 // Must be its own export. `themeColor` and `colorScheme` are Viewport fields,

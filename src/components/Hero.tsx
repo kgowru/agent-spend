@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { HERO_CTA_ID } from "./anchors";
 import { GlowField } from "./GlowField";
 import { HeroPreview } from "./HeroPreview";
 import { MetalButton } from "./MetalButton";
@@ -113,7 +114,12 @@ export function Hero() {
             reduce your spend.
           </p>
 
-          <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+          {/* Watched by the header, which stays out of the way while these two
+           * are on screen and floats in once they are not. */}
+          <div
+            id={HERO_CTA_ID}
+            className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center"
+          >
             <a
               href={BLOG_URL}
               target="_blank"
