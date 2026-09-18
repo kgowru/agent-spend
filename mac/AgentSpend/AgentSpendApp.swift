@@ -8,11 +8,33 @@ enum Main {
         let args = CommandLine.arguments
         if args.contains("--selftest") { exit(SelfTest.run()) }
         if args.contains("--bench") { exit(MainActor.assumeIsolated { Bench.run() }) }
+        // Runs the bundled ccusage sidecar over the agents it owns and prints
+        // what landed. Takes an optional store path so it can be pointed at a
+        // copy: the real store is shared by every checkout on this machine, so
+        // trying a schema change against it is not a test, it is a migration.
+        if let i = args.firstIndex(of: "--agents") {
+            let store = args.count > i + 1
+                ? URL(fileURLWithPath: (args[i + 1] as NSString).expandingTildeInPath)
+                : nil
+            let only = args.count > i + 2
+                ? args[i + 2].split(separator: ",").map(String.init)
+                : nil
+            exit(CLI.runAgents(storePath: store, only: only))
+        }
         if let i = args.firstIndex(of: "--verify") {
             let root = args.count > i + 1
                 ? URL(fileURLWithPath: (args[i + 1] as NSString).expandingTildeInPath)
                 : JSONLIngestor.defaultRoot()
             exit(CLI.runVerify(root: root))
+        }
+        // The Codex equivalent. Separate flag rather than sniffing the tree,
+        // because picking the wrong parser fails silently — neither format
+        // errors on the other's lines, it just finds no usage in them.
+        if let i = args.firstIndex(of: "--verify-codex") {
+            let root = args.count > i + 1 && !args[i + 1].hasPrefix("--")
+                ? URL(fileURLWithPath: (args[i + 1] as NSString).expandingTildeInPath)
+                : CodexIngestor.defaultRoot()
+            exit(CLI.runVerify(root: root, provider: .codex))
         }
         // Renders the same view hierarchy in an ordinary window. A menu bar
         // popover can't be opened programmatically without accessibility
@@ -67,26 +89,13 @@ final class EngineBox: ObservableObject {
 
     init() {
         do {
-            let e = try UsageEngine()
+            // The live app reads every agent CLI it finds; the single-root
+            // initializer stays for the headless verification paths.
+            let e = try UsageEngine(sources: LogSource.all())
             value = e
             Task {
                 await e.refresh()
                 e.startWatching()
-            }
-            // Deliberately here and not in RootView.onAppear: `--render` builds
-            // RootView directly to snapshot the panes, and the snapshotter must
-            // stay hermetic. Nothing that isn't the real app reaches EngineBox.
-            //
-            // The loop matters because a menu bar app runs for weeks without a
-            // relaunch, and a launch-only check would go stale for exactly the
-            // users who never quit. Waking every six hours against a 24-hour
-            // throttle costs nothing measurable — a sleeping task is not a timer.
-            Task {
-                while !Task.isCancelled {
-                    await UpdateChecker.shared.checkIfDue()
-                    do { try await Task.sleep(for: .seconds(6 * 60 * 60)) }
-                    catch { break }   // cancelled; don't spin
-                }
             }
         } catch {
             failure = String(describing: error)
@@ -103,6 +112,13 @@ struct MenuBarLabel: View {
     /// shows only while today's advice differs from it, so glancing at the menu
     /// clears the flag until something genuinely new turns up.
     @AppStorage("seenRecsSignature") private var seenRecs = ""
+
+    /// A dot in front of the number on dev builds, so a dev and a release copy
+    /// running side by side are tellable apart at a glance. It has to ride inside
+    /// the same Text as the number: MenuBarExtra renders its label as one
+    /// monochrome template image where only the first Image survives, so a
+    /// second icon or a coloured badge would either vanish or drop the bolt.
+    private static let devPrefix = AppBuild.isDev ? "· " : ""
 
     var body: some View {
         let today = engine.records(since: Calendar.current.startOfDay(for: Date()))
@@ -124,9 +140,10 @@ struct MenuBarLabel: View {
             // glyph run, not a second view: MenuBarExtra renders its label as a
             // single monochrome template image where only the first Image
             // survives, so a separate/colored badge would vanish or drop the bolt.
-            Text((metric == .energy
-                  ? Format.wh(engine.totalWattHours(today))
-                  : Format.usd(engine.totalCost(today)))
+            Text(Self.devPrefix
+                 + (metric == .energy
+                    ? Format.wh(engine.totalWattHours(today))
+                    : Format.usd(engine.totalCost(today)))
                  + (hasRecs ? " !" : ""))
                 .alignmentGuide(VerticalAlignment.center) { d in
                     // Optical center of the digits: half the cap height above

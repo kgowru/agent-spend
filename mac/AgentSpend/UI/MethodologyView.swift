@@ -8,7 +8,6 @@ import SwiftUI
 struct MethodologyView: View {
     @ObservedObject var engine: UsageEngine
     @AppStorage("menuBarMetric") private var metric = MenuBarMetric.cost
-    @AppStorage("updateCheckEnabled") private var updateChecks = true
 
     var body: some View {
         let all = engine.records
@@ -34,11 +33,11 @@ struct MethodologyView: View {
                 // coefficient moves the total more than any model choice.
                 Text("Drag it. Cache reads are "
                      + Format.percent(engine.tokenTotals(all).cacheEfficiency, places: 0)
-                     + " of your prompt tokens, so this one number moves your total by "
-                     + "roughly 4.6× depending on where you set it. Nobody has ever "
-                     + "measured the energy of a cache hit. The 10% price discount is a "
-                     + "billing decision, not a measurement.")
-                    .font(.caption2).foregroundStyle(.secondary)
+                     + " of your prompt tokens, so this one number swings your total "
+                     + "roughly 4.6× across its plausible range. There is no published "
+                     + "energy measurement of a prompt-cache hit; the 10% price discount "
+                     + "is a billing decision, not a measured energy ratio.")
+                    .font(.caption2).foregroundStyle(.tertiary)
 
                 HStack {
                     Text("all time:").font(.caption2).foregroundStyle(.secondary)
@@ -52,18 +51,18 @@ struct MethodologyView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Coefficients").font(.caption).foregroundStyle(.secondary)
                 Row("output : input energy", String(format: "%.0f×", defaults.outputToInputRatio.v),
-                    "Reading your prompt is cheap: it all goes through the model in one "
-                    + "pass. Writing the reply is expensive: the model has to run again "
-                    + "for every single word it produces. Claude's own pricing treats "
-                    + "output as 5× input.")
+                    "Prefill is one parallel GEMM (compute-bound); decode streams every "
+                    + "weight from HBM per token (bandwidth-bound). Claude's pricing uses 5×.")
                 Row("cache write", String(format: "%.2f×", defaults.cacheWriteFactor.v),
                     "A write performs a full prefill pass.")
                 Row("boundary", engine.energyModel.boundary,
                     "GPU-only accounting would be ~2.4× lower.")
                 Row("model coefficients", "tier proxy",
-                    "Nobody publishes the size of any Claude, GPT-4o, or Gemini model, so "
-                    + "each tier is based on the measured per-query figures above and "
-                    + "scaled by price. Confidence: low.")
+                    "No credible active-parameter figures are published for any Claude "
+                    + "or GPT model, so tiers are anchored to measured per-query figures "
+                    + "and scaled by price. Confidence: low, and lower still when "
+                    + "comparing across vendors, since price reflects positioning as "
+                    + "much as compute.")
             }
 
             Divider()
@@ -71,9 +70,9 @@ struct MethodologyView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Anchors these estimates rest on")
                     .font(.caption).foregroundStyle(.secondary)
-                ForEach(["Google, median Gemini prompt: 0.24 Wh (measured, 2025-05)",
-                         "Microsoft, median large-model query: 0.31 Wh (Joule, peer-reviewed)",
-                         "Epoch AI, modeled GPT-4o: 0.30 Wh @ 500 output tokens"], id: \.self) {
+                ForEach(["Google, median Gemini prompt — 0.24 Wh (measured, 2025-05)",
+                         "Microsoft, median large-model query — 0.31 Wh (Joule, peer-reviewed)",
+                         "Epoch AI, modeled GPT-4o — 0.30 Wh @ 500 output tokens"], id: \.self) {
                     Text("• " + $0).font(.caption2).foregroundStyle(.secondary)
                 }
             }
@@ -83,7 +82,7 @@ struct MethodologyView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Caveats").font(.caption).foregroundStyle(.secondary)
                 ForEach(engine.energyModel.caveats, id: \.self) {
-                    Text("• " + $0).font(.caption2).foregroundStyle(.secondary)
+                    Text("• " + $0).font(.caption2).foregroundStyle(.tertiary)
                 }
             }
 
@@ -94,34 +93,10 @@ struct MethodologyView: View {
             }
             .font(.caption)
 
-            // Disclosed here, in the pane that exists to say what the app does
-            // and doesn't know, because it is the app's only network call and a
-            // README claiming "no network calls" would otherwise be the only
-            // place a user could learn that changed.
-            VStack(alignment: .leading, spacing: 3) {
-                Toggle(isOn: $updateChecks) {
-                    Text("Check for new versions").font(.caption)
-                }
-                .controlSize(.small)
-                Text(Self.updateCheckNote)
-                    .font(.caption2).foregroundStyle(.secondary)
-            }
-
             Text("Coefficients generated \(engine.energyModel.generated). These figures "
-                 + "go stale fast: Google reported a 33× energy reduction in 12 months.")
+                 + "decay fast — Google reported a 33× energy reduction in 12 months.")
                 .font(.caption2).foregroundStyle(.tertiary)
         }
-    }
-
-    /// Built outside the view body: as one concatenated `Text` argument with an
-    /// optional interpolation on the end, the type checker gave up on it.
-    private static var updateCheckNote: String {
-        var s = "The only network call AgentSpend makes. Once a day it asks GitHub "
-              + "for the latest release number and shows a footer link if yours is "
-              + "older. It sends no identifier and no usage data, and never "
-              + "downloads or installs anything by itself."
-        if let v = UpdateChecker.currentVersion { s += " You're on \(v)." }
-        return s
     }
 
     @ViewBuilder
@@ -132,7 +107,7 @@ struct MethodologyView: View {
                 Spacer()
                 Text(value).font(.caption).monospacedDigit()
             }
-            Text(note).font(.caption2).foregroundStyle(.secondary)
+            Text(note).font(.caption2).foregroundStyle(.tertiary)
         }
     }
 }

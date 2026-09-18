@@ -1,6 +1,17 @@
 import Foundation
 
 enum Format {
+    /// A model id short enough for a dense row, without losing the vendor.
+    ///
+    /// One helper rather than three copies of `replacingOccurrences(of:
+    /// "claude-")`. Stripping only Anthropic's prefix left `opus-4-8` sitting
+    /// beside `gpt-5.6-sol` in the same list, which reads as one vendor's
+    /// catalogue — so the prefix is dropped only where what remains still names
+    /// its family unambiguously.
+    static func model(_ id: String) -> String {
+        id.hasPrefix("claude-") ? String(id.dropFirst("claude-".count)) : id
+    }
+
     private static func decimal(_ d: Double, _ places: Int) -> String {
         let f = NumberFormatter()
         f.numberStyle = .decimal

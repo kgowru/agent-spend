@@ -46,8 +46,25 @@ DMG="build/AgentSpend.dmg"
 #    Developer ID and the hardened runtime — notarization rejects anything less.
 ./dist.sh >/dev/null
 rm -f build/AgentSpend.zip          # dist.sh's ad-hoc zip isn't what we publish
-codesign --force --deep --options runtime --timestamp --sign "$DEVID" "$APP"
-codesign --verify --strict --verbose=2 "$APP"
+#    Inside-out, nested code first. `--deep` is deprecated by Apple and applies
+#    the outer flags to nested binaries as a side effect rather than a contract,
+#    which is how a bundled helper reaches the notary without the hardened
+#    runtime and gets the whole submission rejected. Sign the helper explicitly,
+#    then the bundle, which seals it. `--deep` stays on --verify, where it is
+#    still the right flag: there it means "check nested code too".
+codesign --force --options runtime --timestamp --sign "$DEVID" \
+  "$APP/Contents/Helpers/ccusage"
+codesign --force --options runtime --timestamp --sign "$DEVID" "$APP"
+codesign --verify --deep --strict --verbose=2 "$APP"
+
+# The notary rejects nested code that is unsigned, ad-hoc signed, or missing the
+# hardened runtime, and the error it returns names the file without saying which
+# of the three it was. Assert it here, where the message can be specific.
+helper_flags="$(codesign -dv "$APP/Contents/Helpers/ccusage" 2>&1 | sed -n 's/.*flags=\([^ ]*\).*/\1/p')"
+case "$helper_flags" in
+  *runtime*) ;;
+  *) echo "error: ccusage helper lacks the hardened runtime (flags=$helper_flags)" >&2; exit 1 ;;
+esac
 
 # 2. Notarize the APP itself, then staple the ticket INTO the app. Stapling the
 #    dmg alone isn't enough: once someone drags the app to /Applications, the

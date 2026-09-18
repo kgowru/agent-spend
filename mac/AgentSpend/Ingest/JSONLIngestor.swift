@@ -19,17 +19,9 @@ import Foundation
 struct JSONLIngestor {
     static let synthetic = "<synthetic>"
 
-    struct Stats: Sendable {
-        var filesScanned = 0
-        var subagentFiles = 0
-        var bytesRead: Int64 = 0
-        var rawUsageRows = 0
-        var duplicates = 0
-        var supersededPartials = 0
-        var synthetic = 0
-        var unparseable = 0
-        var rotatedFiles = 0
-    }
+    /// Retained as an alias so existing call sites and tests keep reading
+    /// naturally; the type itself is provider-neutral and lives in LineScanner.
+    typealias Stats = IngestStats
 
     /// Only ~40% of lines carry usage. Byte-scanning for this before decoding
     /// avoids paying full JSON parse on the majority.
@@ -39,16 +31,8 @@ struct JSONLIngestor {
         URL(fileURLWithPath: NSHomeDirectory()).appending(path: ".claude/projects")
     }
 
-    /// Enumerate every `.jsonl` beneath `root`, at any depth.
     static func sessionFiles(under root: URL) -> [URL] {
-        guard let e = FileManager.default.enumerator(
-            at: root,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
-        ) else { return [] }
-        return e.compactMap { $0 as? URL }
-            .filter { $0.pathExtension == "jsonl" }
-            .sorted { $0.path < $1.path }
+        LineScanner.sessionFiles(under: root)
     }
 
     /// Parse everything past each file's recorded offset.
@@ -76,43 +60,11 @@ struct JSONLIngestor {
         stats: inout Stats
     ) -> [String: UsageRecord] {
         var best: [String: UsageRecord] = [:]
-
-        for url in files {
-            let isSubagent = url.path.contains("/subagents/")
-            stats.filesScanned += 1
-            if isSubagent { stats.subagentFiles += 1 }
-
-            guard let entry = index.prepare(for: url) else { continue }
-            if entry.rotated { stats.rotatedFiles += 1 }
-
-            guard let handle = try? FileHandle(forReadingFrom: url) else { continue }
-            defer { try? handle.close() }
-
-            do { try handle.seek(toOffset: entry.offset) } catch { continue }
-            guard let chunk = try? handle.readToEnd(), !chunk.isEmpty else { continue }
-            stats.bytesRead += Int64(chunk.count)
-
-            // A file being appended to can end mid-line. Keep the remainder and
-            // prepend it on the next pass rather than dropping or misparsing it.
-            var data = index.pendingTail(for: url)
-            data.append(chunk)
-
-            var consumed = 0
-            var lineStart = data.startIndex
-            while let nl = data[lineStart...].firstIndex(of: 0x0A) {
-                let line = data[lineStart..<nl]
-                consumed = nl + 1 - data.startIndex
-                lineStart = nl + 1
-                ingest(line: line, isSubagent: isSubagent, into: &best, stats: &stats)
-            }
-
-            let tail = data[lineStart...]
-            index.record(url: url,
-                         offset: entry.offset + UInt64(chunk.count),
-                         size: entry.size,
-                         inode: entry.inode,
-                         tail: tail.isEmpty ? Data() : Data(tail))
-            _ = consumed
+        LineScanner.scan(files: files, index: &index, stats: &stats) { line, url, _, stats in
+            // Claude repeats every field on every usage row, so this parser
+            // carries no state between lines.
+            ingest(line: line, isSubagent: url.path.contains("/subagents/"),
+                   into: &best, stats: &stats)
         }
         return best
     }
@@ -123,7 +75,7 @@ struct JSONLIngestor {
         into best: inout [String: UsageRecord],
         stats: inout Stats
     ) {
-        guard line.count > usageMarker.count, contains(line, usageMarker) else { return }
+        guard LineScanner.contains(line, usageMarker) else { return }
         guard let obj = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any],
               let msg = obj["message"] as? [String: Any],
               let usage = msg["usage"] as? [String: Any]
@@ -153,6 +105,7 @@ struct JSONLIngestor {
         let cc = usage["cache_creation"] as? [String: Any] ?? [:]
         best[key] = UsageRecord(
             id: key,
+            provider: .claude,
             timestamp: (obj["timestamp"] as? String).flatMap(parseTimestamp),
             model: ModelID.normalize(rawModel),
             input: usage["input_tokens"] as? Int ?? 0,
@@ -215,23 +168,5 @@ struct JSONLIngestor {
             }
         }
         return Date(timeIntervalSince1970: t)
-    }
-
-    /// Substring search over raw bytes — cheaper than decoding to String.
-    private static func contains(_ haystack: Data.SubSequence, _ needle: [UInt8]) -> Bool {
-        guard let first = needle.first else { return true }
-        var i = haystack.startIndex
-        let limit = haystack.index(haystack.endIndex, offsetBy: -needle.count)
-        while i <= limit {
-            guard let hit = haystack[i...].firstIndex(of: first), hit <= limit else { return false }
-            var match = true
-            for (k, b) in needle.enumerated() where haystack[hit + k] != b {
-                match = false
-                break
-            }
-            if match { return true }
-            i = hit + 1
-        }
-        return false
     }
 }

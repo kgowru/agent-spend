@@ -1,0 +1,49 @@
+{
+  "_comment": [
+    "Pinned ccusage build. AgentSpend bundles this binary to read the agent CLIs it",
+    "has no native parser for. Pinning by the sha256 of the extracted Mach-O rather",
+    "than the tarball is deliberate: npm tarballs can be re-packed with identical",
+    "contents and a different archive hash, and it is the executable we are about to",
+    "sign with a Developer ID and ship, so that is the artifact worth pinning.",
+    "",
+    "Bumping: run ./vendor-ccusage.sh --update <version>, which rewrites the hashes",
+    "here after downloading. Review the diff. Never hand-edit a hash to make a build",
+    "pass, because that defeats the only check standing between npm and a notarized",
+    "release signed with your own certificate.",
+    "",
+    "ccusage is MIT licensed, Copyright (c) 2025 ryoppippi. See vendor/LICENSE-ccusage,",
+    "which vendor-ccusage.sh writes next to the binary and build-app.sh ships."
+  ],
+  "version": "20.0.20",
+  "registry": "https://registry.npmjs.org",
+  "slices": {
+    "arm64": {
+      "package": "@ccusage/ccusage-darwin-arm64",
+      "sha256": "0da92f9ba7c1d78d54a8664d3d9a0f4a8565c67889590ec8859e75167a4a15ce",
+      "bytes": 3196512
+    },
+    "x86_64": {
+      "package": "@ccusage/ccusage-darwin-x64",
+      "sha256": "c9d3213b6c7ccb585faa80918bdd28974b54ce12f55fb3bd3879e6fc808fb9a8",
+      "bytes": 3768416
+    }
+  },
+  "agents": [
+    "opencode", "amp", "droid", "codebuff", "hermes", "pi",
+    "goose", "kilo", "copilot", "gemini", "kimi", "qwen",
+    "openclaw", "grok"
+  ],
+  "_agentsNote": [
+    "The 14 agents the sidecar owns. `claude` and `codex` are deliberately absent:",
+    "both have native Swift ingestors that are strictly better. Native Claude matches",
+    "ccusage per-date at 1.00x while also retaining 32 days of history that ccusage",
+    "cannot see (Claude Code prunes old sessions; the store never deletes), and it",
+    "costs no extra memory, where `ccusage claude` peaks at 1.2 GB resident. Native",
+    "Codex reads the cumulative running total, which matches Codex's own state sqlite",
+    "exactly, where ccusage sums per-turn deltas and loses every dropped token_count",
+    "event: 18,513,223 against a true 19,206,339 on this corpus, a 3.6% undercount.",
+    "",
+    "ccusage v20.0.20 exposes 16 agent subcommands, not the 18 its README advertises.",
+    "`antigravity` and `zcode` return \"Unknown command\"."
+  ]
+}

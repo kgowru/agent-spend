@@ -1,34 +1,261 @@
 {
-  "schemaVersion": 1,
-  "generated": "2026-07-27",
+  "schemaVersion": 3,
+  "generated": "2026-09-17",
   "currency": "USD",
   "unit": "per_million_tokens",
   "notes": [
-    "Source: Anthropic published pricing (claude-api skill catalog, cached 2026-06-24).",
-    "Cache read = 0.1x base input. Cache write = 1.25x base input for the 5-minute TTL, 2x for the 1-hour TTL.",
-    "Claude Code uses 1h ephemeral caching heavily, so the 5m/1h split is tracked separately rather than assumed."
+    "Anthropic rates verified against the published pricing table on 2026-09-17.",
+    "cacheMultipliers is keyed by provider: Anthropic charges a premium to WRITE the cache (1.25x for the 5-minute TTL, 2x for the hour) and reads at 0.1x. A model may override its vendor's terms via its own `cache` block, because neither vendor is internally uniform.",
+    "Fable 5.1 and Mythos 5.1 read cache at 0.025x ($0.25/MTok), not 0.1x. Cache reads are ~95% of local token volume, so applying the vendor default to them is a 4x overcharge on almost the whole bill.",
+    "Sonnet 5 is $2/$10. The increase to $3/$15 scheduled for 2026-09-01 was cancelled and the launch price made permanent."
   ],
   "cacheMultipliers": {
-    "read": 0.1,
-    "write5m": 1.25,
-    "write1h": 2.0
+    "claude": {
+      "read": 0.1,
+      "write5m": 1.25,
+      "write1h": 2.0
+    },
+    "codex": {
+      "read": 0.1,
+      "write5m": 0.0,
+      "write1h": 0.0
+    }
   },
   "models": [
-    { "id": "claude-fable-5",    "input": 10.0, "output": 50.0, "tier": "frontier-large", "confidence": "high" },
-    { "id": "claude-mythos-5",   "input": 10.0, "output": 50.0, "tier": "frontier-large", "confidence": "high" },
-    { "id": "claude-opus-4-8",   "input":  5.0, "output": 25.0, "tier": "frontier-large", "confidence": "high" },
-    { "id": "claude-opus-4-7",   "input":  5.0, "output": 25.0, "tier": "frontier-large", "confidence": "high" },
-    { "id": "claude-opus-4-6",   "input":  5.0, "output": 25.0, "tier": "frontier-large", "confidence": "high" },
-    { "id": "claude-opus-4-5",   "input":  5.0, "output": 25.0, "tier": "frontier-large", "confidence": "medium" },
-    { "id": "claude-sonnet-5",   "input":  3.0, "output": 15.0, "tier": "frontier-mid",   "confidence": "high" },
-    { "id": "claude-sonnet-4-6", "input":  3.0, "output": 15.0, "tier": "frontier-mid",   "confidence": "high" },
-    { "id": "claude-sonnet-4-5", "input":  3.0, "output": 15.0, "tier": "frontier-mid",   "confidence": "medium" },
-    { "id": "claude-haiku-4-5",  "input":  1.0, "output":  5.0, "tier": "frontier-small", "confidence": "high" }
+    {
+      "id": "claude-fable-5-1",
+      "provider": "claude",
+      "input": 10.0,
+      "output": 50.0,
+      "tier": "frontier-large",
+      "confidence": "high",
+      "cache": {
+        "read": 0.025,
+        "write5m": 1.25,
+        "write1h": 2.0
+      },
+      "why": "Cache hits bill at $0.25/MTok, a quarter of the 0.1x vendor default."
+    },
+    {
+      "id": "claude-mythos-5-1",
+      "provider": "claude",
+      "input": 10.0,
+      "output": 50.0,
+      "tier": "frontier-large",
+      "confidence": "high",
+      "cache": {
+        "read": 0.025,
+        "write5m": 1.25,
+        "write1h": 2.0
+      },
+      "why": "Same terms as Fable 5.1. Limited availability (Project Glasswing)."
+    },
+    {
+      "id": "claude-fable-5",
+      "provider": "claude",
+      "input": 10.0,
+      "output": 50.0,
+      "tier": "frontier-large",
+      "confidence": "high"
+    },
+    {
+      "id": "claude-mythos-5",
+      "provider": "claude",
+      "input": 10.0,
+      "output": 50.0,
+      "tier": "frontier-large",
+      "confidence": "high"
+    },
+    {
+      "id": "claude-opus-5",
+      "provider": "claude",
+      "input": 5.0,
+      "output": 25.0,
+      "tier": "frontier-large",
+      "confidence": "high",
+      "why": "Published at $5/$25. Previously carried in unknownModels at \"unknown\" confidence, which flagged the largest single slice of local usage as unrecognized even though the assumed price was right."
+    },
+    {
+      "id": "claude-opus-4-8",
+      "provider": "claude",
+      "input": 5.0,
+      "output": 25.0,
+      "tier": "frontier-large",
+      "confidence": "high"
+    },
+    {
+      "id": "claude-opus-4-7",
+      "provider": "claude",
+      "input": 5.0,
+      "output": 25.0,
+      "tier": "frontier-large",
+      "confidence": "high"
+    },
+    {
+      "id": "claude-opus-4-6",
+      "provider": "claude",
+      "input": 5.0,
+      "output": 25.0,
+      "tier": "frontier-large",
+      "confidence": "high"
+    },
+    {
+      "id": "claude-opus-4-5",
+      "provider": "claude",
+      "input": 5.0,
+      "output": 25.0,
+      "tier": "frontier-large",
+      "confidence": "high"
+    },
+    {
+      "id": "claude-sonnet-5",
+      "provider": "claude",
+      "input": 2.0,
+      "output": 10.0,
+      "tier": "frontier-mid",
+      "confidence": "high",
+      "why": "$2/$10. The $3/$15 increase scheduled for 2026-09-01 was cancelled and the launch price made permanent."
+    },
+    {
+      "id": "claude-sonnet-4-6",
+      "provider": "claude",
+      "input": 3.0,
+      "output": 15.0,
+      "tier": "frontier-mid",
+      "confidence": "high"
+    },
+    {
+      "id": "claude-sonnet-4-5",
+      "provider": "claude",
+      "input": 3.0,
+      "output": 15.0,
+      "tier": "frontier-mid",
+      "confidence": "medium"
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "provider": "claude",
+      "input": 1.0,
+      "output": 5.0,
+      "tier": "frontier-small",
+      "confidence": "high"
+    },
+    {
+      "id": "gpt-5.6-sol",
+      "provider": "codex",
+      "input": 4.0,
+      "output": 20.0,
+      "tier": "frontier-large",
+      "confidence": "high",
+      "cache": {
+        "read": 0.1,
+        "write5m": 1.25,
+        "write1h": 1.25
+      },
+      "why": "Promotional rate, guaranteed by OpenAI only through 2026-11-21. Re-check after that date."
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "provider": "codex",
+      "input": 2.0,
+      "output": 12.0,
+      "tier": "frontier-mid",
+      "confidence": "high",
+      "cache": {
+        "read": 0.1,
+        "write5m": 1.25,
+        "write1h": 1.25
+      }
+    },
+    {
+      "id": "gpt-5.6-luna",
+      "provider": "codex",
+      "input": 0.2,
+      "output": 1.2,
+      "tier": "frontier-small",
+      "confidence": "high",
+      "cache": {
+        "read": 0.1,
+        "write5m": 1.25,
+        "write1h": 1.25
+      }
+    },
+    {
+      "id": "gpt-5.5",
+      "provider": "codex",
+      "input": 5.0,
+      "output": 30.0,
+      "tier": "frontier-large",
+      "confidence": "high"
+    },
+    {
+      "id": "gpt-5.4",
+      "provider": "codex",
+      "input": 2.5,
+      "output": 15.0,
+      "tier": "frontier-mid",
+      "confidence": "high"
+    },
+    {
+      "id": "gpt-5.4-mini",
+      "provider": "codex",
+      "input": 0.75,
+      "output": 4.5,
+      "tier": "frontier-mid",
+      "confidence": "high"
+    },
+    {
+      "id": "gpt-5.3-codex",
+      "provider": "codex",
+      "input": 1.75,
+      "output": 14.0,
+      "tier": "frontier-mid",
+      "confidence": "high"
+    },
+    {
+      "id": "gpt-5.2",
+      "provider": "codex",
+      "input": 1.75,
+      "output": 14.0,
+      "tier": "frontier-mid",
+      "confidence": "high"
+    },
+    {
+      "id": "gpt-5.1",
+      "provider": "codex",
+      "input": 1.25,
+      "output": 10.0,
+      "tier": "frontier-mid",
+      "confidence": "high"
+    },
+    {
+      "id": "gpt-5",
+      "provider": "codex",
+      "input": 1.25,
+      "output": 10.0,
+      "tier": "frontier-mid",
+      "confidence": "high"
+    },
+    {
+      "id": "gpt-5-mini",
+      "provider": "codex",
+      "input": 0.25,
+      "output": 2.0,
+      "tier": "frontier-small",
+      "confidence": "high"
+    },
+    {
+      "id": "gpt-5-nano",
+      "provider": "codex",
+      "input": 0.05,
+      "output": 0.4,
+      "tier": "frontier-small",
+      "confidence": "high"
+    }
   ],
   "unknownModels": {
-    "note": "Models observed in local logs but absent from the published catalog. Priced at their apparent tier and flagged in the UI rather than silently guessed.",
-    "entries": [
-      { "id": "claude-opus-5", "input": 5.0, "output": 25.0, "tier": "frontier-large", "confidence": "unknown", "why": "Present in local session logs; not in the published pricing catalog as of 2026-07-27. Opus-tier pricing assumed." }
-    ]
-  }
+    "note": "Models observed in local logs but absent from the published catalog. Priced at their apparent tier and flagged in the UI rather than silently guessed. Currently empty: claude-opus-5, the only occupant, turned out to be published at exactly the price that had been assumed for it.",
+    "entries": []
+  },
+  "source": "https://platform.claude.com/docs/en/about-claude/pricing"
 }

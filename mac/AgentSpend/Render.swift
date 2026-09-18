@@ -9,33 +9,15 @@ import SwiftUI
 /// file. Reads from the store populated by a prior run, so it needs no ingest.
 @MainActor
 enum Render {
-    /// `AGENTSPEND_RENDER_DARK=1` renders the panes in dark appearance, for
-    /// marketing captures on a dark page. Off by default so the verification
-    /// output stays byte-comparable with previous runs.
-    static var dark: Bool {
-        ProcessInfo.processInfo.environment["AGENTSPEND_RENDER_DARK"] == "1"
-    }
-
-    /// `AGENTSPEND_RENDER_SCALE` overrides the rasterization scale. 2 is device
-    /// parity for the verification pass; marketing captures are displayed wider
-    /// than the pane's own point size, so they need more pixels than that or a
-    /// Retina browser upscales them. Clamped to keep a typo from allocating a
-    /// gigapixel bitmap.
-    static var scale: CGFloat {
-        guard let raw = ProcessInfo.processInfo.environment["AGENTSPEND_RENDER_SCALE"],
-              let value = Double(raw) else { return 2 }
-        return CGFloat(min(max(value, 1), 6))
-    }
-
     static func run(to dir: String) -> Int32 {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.accessory)
-        if dark { NSApp.appearance = NSAppearance(named: .darkAqua) }
 
         do {
             let out = URL(fileURLWithPath: (dir as NSString).expandingTildeInPath)
             try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
-            let engine = try UsageEngine()
+            // Detected sources, so a render shows what the shipped app shows.
+            let engine = try UsageEngine(sources: LogSource.all())
 
             if engine.records.isEmpty {
                 print("store is empty — run the app once so it can ingest, then retry")
@@ -109,6 +91,39 @@ enum Render {
                 if !ok { return 1 }
             }
 
+            // Minimum WIDTH, per history window.
+            //
+            // The popover is a hard 420pt and its ScrollView only scrolls
+            // vertically, so a pane that cannot compress below that does not
+            // scroll: it overflows sideways and the window clips the headline on
+            // both edges. `snap()` cannot catch this, because forcing
+            // `.frame(width: 396)` makes SwiftUI squeeze the content rather than
+            // report that it did not fit. Only an unconstrained fitting size
+            // tells the truth, which is the same reason the height check above
+            // uses NSHostingController instead of ImageRenderer.
+            //
+            // This shipped once: a 3pt today-marker dot per day, written as
+            // `Circle().frame(width: 3)` inside a flexible cell, is an
+            // incompressible minimum. At 90 days that demanded 90*3 + 89*2 = 448pt.
+            let previousWindow = UserDefaults.standard.integer(forKey: "historyDays")
+            for window in [1, 14, 30, 90] {
+                UserDefaults.standard.set(window, forKey: "historyDays")
+                let host = NSHostingController(rootView: TodayView(engine: engine))
+                // Propose a 1pt width and read back what it can actually shrink
+                // to. `fittingSize` is the wrong metric here: it reports the
+                // IDEAL width, which grows with the day count (989pt at 90d)
+                // even for a layout that compresses to 396 without complaint.
+                // The minimum is what decides whether the popover clips.
+                let minW = host.sizeThatFits(in: CGSize(width: 1, height: 10_000)).width
+                let fits = minW <= 396.5   // half a point for rounding
+                print(String(format: "  width %3dd  min %4.0fpt  %@", window, minW,
+                             fits ? "fits"
+                                  : "OVERFLOWS — pane is wider than its own window"))
+                if !fits { return 1 }
+            }
+            UserDefaults.standard.set(previousWindow == 0 ? 14 : previousWindow,
+                                      forKey: "historyDays")
+
             // ImageRenderer can't rasterize interactive controls, so the Slider
             // shows as a placeholder above. Its appearance is stock SwiftUI; the
             // part that could genuinely be wrong is the binding, so exercise
@@ -140,16 +155,19 @@ enum Render {
     @discardableResult
     private static func snap(_ view: some View, _ name: String, _ dir: URL,
                              width: CGFloat? = 396) throws -> CGSize {
-        let base = width.map { view.frame(width: $0, alignment: .topLeading).padding(12)
-            .background(Color(nsColor: .windowBackgroundColor)).eraseToAny() }
-            ?? view.background(Color(nsColor: .windowBackgroundColor)).eraseToAny()
-        // ImageRenderer resolves colours from the SwiftUI environment, not from
-        // NSApp.appearance, so the scheme has to be set on the content too.
-        let themed = dark
-            ? base.environment(\.colorScheme, .dark).eraseToAny()
-            : base
-        let renderer = ImageRenderer(content: themed)
-        renderer.scale = scale
+        // The app lives in a dark menu bar, so a light render judges the palette
+        // against a surface it never actually sits on. ImageRenderer does not
+        // inherit the system appearance, so the scheme has to be stated.
+        let dark = ProcessInfo.processInfo.environment["AGENTSPEND_RENDER_DARK"] != nil
+        let surface = dark ? Color(red: 0.117, green: 0.117, blue: 0.113)   // #1e1e1d
+                           : Color(nsColor: .windowBackgroundColor)
+        let scheme: ColorScheme = dark ? .dark : .light
+        let base = width.map {
+            view.frame(width: $0, alignment: .topLeading).padding(12)
+                .background(surface).environment(\.colorScheme, scheme).eraseToAny()
+        } ?? view.background(surface).environment(\.colorScheme, scheme).eraseToAny()
+        let renderer = ImageRenderer(content: base)
+        renderer.scale = 2
         guard let image = renderer.nsImage,
               let tiff = image.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff),

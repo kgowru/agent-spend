@@ -88,22 +88,30 @@ struct SessionRow: View {
             // Long context is where cost runs away superlinearly, so outliers
             // are worth calling out on the row rather than leaving to inference.
             if session.avgContextTokens > longThreshold {
-                Text("avg context \(Format.tokens(session.avgContextTokens)), "
+                Text("avg context \(Format.tokens(session.avgContextTokens)) — "
                      + "well above your median")
                     .font(.caption2).foregroundStyle(.orange)
             }
         }
     }
 
-    private func short(_ m: String) -> String {
-        m.replacingOccurrences(of: "claude-", with: "")
-    }
+    private func short(_ m: String) -> String { Format.model(m) }
 }
 
 /// When today's work happened. Hovering an hour reads out that hour's spend.
 struct HourlyBars: View {
-    let hours: [(hour: Int, requests: Int, usd: Double)]
+    let hours: [(hour: Int, requests: Int, usd: Double, slices: [AgentSlice])]
+    /// Today's sidecar spend. Shown as its own line rather than folded into the
+    /// bars: these agents report a day at a time with no timestamps, so placing
+    /// them in an hour would be inventing detail the data does not contain.
+    var sidecar: [AgentSlice] = []
     @State private var hovered: Int?
+
+    private var present: [String] {
+        var seen = Set<String>()
+        for h in hours { for s in h.slices where s.usd > 0 { seen.insert(s.agent) } }
+        return seen.sorted { AgentPalette.rank($0) < AgentPalette.rank($1) }
+    }
 
     var body: some View {
         let maxV = hours.map(\.usd).max() ?? 0
@@ -125,10 +133,7 @@ struct HourlyBars: View {
                 ForEach(hours, id: \.hour) { h in
                     ZStack(alignment: .bottom) {
                         Color.clear
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(.tint)
-                            .opacity(h.usd == 0 ? 0.12 : (hovered == nil || hovered == h.hour ? 0.85 : 0.35))
-                            .frame(height: maxV == 0 ? 2 : max(2, 34 * h.usd / maxV))
+                        bar(h, maxV: maxV)
                     }
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
@@ -136,8 +141,7 @@ struct HourlyBars: View {
                         if inside { hovered = h.hour }
                         else if hovered == h.hour { hovered = nil }
                     }
-                    .help(String(format: "%02d:00 · %@ · %d req", h.hour,
-                                 Format.usd(h.usd), h.requests))
+                    .help(tooltip(h))
                 }
             }
             .frame(height: 34)
@@ -145,6 +149,77 @@ struct HourlyBars: View {
                 Text("00"); Spacer(); Text("12"); Spacer(); Text("23")
             }
             .font(.caption2).foregroundStyle(.tertiary)
+
+            // The hovered hour's split, the legend otherwise. Same slot either
+            // way so the pane does not resize under the pointer.
+            Group {
+                if let h = focus, !h.slices.isEmpty {
+                    marks(h.slices, showValues: true)
+                } else if !present.isEmpty {
+                    marks(present.map { AgentSlice(agent: $0, usd: 0) }, showValues: false)
+                }
+            }
+            .frame(height: 14, alignment: .leading)
+
+            if !sidecar.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(sidecar) { s in
+                        HStack(spacing: 3) {
+                            AgentMark(agent: s.agent, size: 9)
+                            Text(Format.usd(s.usd)).monospacedDigit().foregroundStyle(.primary)
+                        }
+                    }
+                    Text("today, no hourly detail").foregroundStyle(.tertiary)
+                    Spacer(minLength: 0)
+                }
+                .font(.caption2).lineLimit(1)
+            }
         }
+    }
+
+    @ViewBuilder
+    private func bar(_ h: (hour: Int, requests: Int, usd: Double, slices: [AgentSlice]),
+                     maxV: Double) -> some View {
+        let height = maxV == 0 ? 2 : max(2, 34 * h.usd / maxV)
+        if h.slices.isEmpty {
+            RoundedRectangle(cornerRadius: 1)
+                .fill(Color.secondary).opacity(0.12).frame(height: 2)
+        } else {
+            // No gap between segments here. At 34pt tall and 24 bars wide these
+            // are a couple of points across, and a separator would eat the
+            // segment rather than separate it.
+            VStack(spacing: 0) {
+                ForEach(h.slices.reversed()) { s in
+                    AgentPalette.color(s.agent)
+                        .frame(height: max(1, height * (s.usd / max(h.usd, 0.0001))))
+                }
+            }
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 1.5, topTrailingRadius: 1.5))
+            .opacity(hovered == nil || hovered == h.hour ? 1.0 : 0.35)
+        }
+    }
+
+    private func marks(_ slices: [AgentSlice], showValues: Bool) -> some View {
+        HStack(spacing: 8) {
+            ForEach(slices) { s in
+                HStack(spacing: 3) {
+                    AgentMark(agent: s.agent, size: 9)
+                    Text(AgentPalette.label(s.agent)).foregroundStyle(.secondary)
+                    if showValues {
+                        Text(Format.usd(s.usd)).foregroundStyle(.primary).monospacedDigit()
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.caption2).lineLimit(1)
+    }
+
+    private func tooltip(_ h: (hour: Int, requests: Int, usd: Double, slices: [AgentSlice])) -> String {
+        let head = String(format: "%02d:00 — %@ · %d req", h.hour, Format.usd(h.usd), h.requests)
+        guard !h.slices.isEmpty else { return head }
+        return head + "\n" + h.slices
+            .map { "  \(AgentPalette.label($0.agent))  \(Format.usd($0.usd))" }
+            .joined(separator: "\n")
     }
 }
