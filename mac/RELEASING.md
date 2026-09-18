@@ -113,9 +113,19 @@ want its discovery.
   but never who or what they spent. Everything else is local, and the check is
   switchable in the Method pane. Say the precise version loudly; "your data
   never leaves your Mac" is the selling point, and it's still true.
-- **Affiliation.** It reads Claude Code's logs but isn't affiliated with
-  Anthropic. Don't use Claude/Anthropic logos; add a one-line "not affiliated"
-  note.
+- **Affiliation and logos.** It reads these tools' logs but isn't affiliated
+  with any of their vendors. The README carries a "not affiliated" section, and
+  it names every vendor rather than only Anthropic.
+
+  As of v0.1.2 the app **does** show each agent's logo, next to that agent's
+  share of the spend. This reverses the earlier guidance here, deliberately: a
+  stacked chart needs to say whose segment is whose, and a mark used to identify
+  whose usage a figure represents is nominative use rather than branding. What
+  that requires in return is written down in `NOTICE-logos.md`, which records
+  the marks' owners, that CC0 covers Simple Icons' redrawing and not the
+  trademarks themselves, and which agents fall back to a lettermark because no
+  vendor publishes a usable mark. Ship that file inside the bundle; `build-app.sh`
+  already copies it to `Contents/Resources`.
 
 ## The real maintenance cost
 
