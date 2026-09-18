@@ -62,7 +62,9 @@ struct TodayView: View {
                     .font(.system(size: 28, weight: .medium, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(overageColor)
-                Text("\(Format.wh(today?.wh ?? 0)) · \(today?.requests ?? 0) requests")
+                Text(energyLine(today?.wh ?? 0,
+                                partial: engine.energyIsPartial(engine.records(since: start)))
+                     + " · \(today?.requests ?? 0) requests")
                     .font(.caption2).foregroundStyle(.secondary)
                 Text(Format.homeEnergy(today?.wh ?? 0, engine.energyModel.equivalences))
                     .font(.caption2).foregroundStyle(.secondary)
@@ -91,6 +93,18 @@ struct TodayView: View {
                 }
             }
         }
+
+
+            // What the number actually is. On a flat-rate plan this figure is a
+            // list-price equivalent, not money charged, and the gap is large:
+            // a fortnight reading $2,272 costs about $50 on Claude Max 5x.
+            // Leaving it unqualified is the single biggest overstatement in the
+            // app, so it is said plainly rather than buried in the Method pane.
+            if let caveat = engine.billing.caveat {
+                Text(caveat)
+                    .font(.caption2).foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
         if today?.requests ?? 0 == 0 {
             Text("No activity yet today.")
@@ -144,6 +158,9 @@ struct TodayView: View {
         let avg = active.isEmpty ? 0 : active.reduce(0) { $0 + $1.usd } / Double(active.count)
         let periodUsd = summaries.reduce(0) { $0 + $1.usd }
         let periodWh = summaries.reduce(0) { $0 + $1.wh }
+        let windowStart = Calendar.current.startOfDay(for: Date())
+            .addingTimeInterval(-Double(days - 1) * 86_400)
+        let energyPartial = engine.energyIsPartial(engine.records(since: windowStart))
 
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 1) {
@@ -151,8 +168,8 @@ struct TodayView: View {
                 Text(Format.usd(periodUsd))
                     .font(.system(size: 28, weight: .medium, design: .rounded))
                     .monospacedDigit()
-                Text("\(Format.wh(periodWh)) · "
-                     + "\(Format.count(summaries.reduce(0) { $0 + $1.requests })) requests")
+                Text(energyLine(periodWh, partial: energyPartial)
+                     + " · \(Format.count(summaries.reduce(0) { $0 + $1.requests })) requests")
                     .font(.caption2).foregroundStyle(.secondary)
                 Text(Format.homeEnergy(periodWh, engine.energyModel.equivalences))
                     .font(.caption2).foregroundStyle(.secondary)
@@ -173,7 +190,19 @@ struct TodayView: View {
             }
         }
 
-        DailyBars(summaries: summaries)
+
+            // What the number actually is. On a flat-rate plan this figure is a
+            // list-price equivalent, not money charged, and the gap is large:
+            // a fortnight reading $2,272 costs about $50 on Claude Max 5x.
+            // Leaving it unqualified is the single biggest overstatement in the
+            // app, so it is said plainly rather than buried in the Method pane.
+            if let caveat = engine.billing.caveat {
+                Text(caveat)
+                    .font(.caption2).foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+                DailyBars(summaries: summaries)
 
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -214,6 +243,16 @@ struct TodayView: View {
             Text("\(Format.usd(avg)) · \(Format.wh(periodWh / Double(max(active.count, 1)))) per active day")
                 .font(.caption).monospacedDigit().foregroundStyle(.secondary)
         }
+    }
+
+    /// The energy figure, said honestly.
+    ///
+    /// Energy is withheld for models whose tier would be a price guess, so a
+    /// total across a mixed set covers only the Anthropic part. Summing a subset
+    /// and printing it bare would read as the whole, which is the exact
+    /// silent-partial-number failure this app exists to argue against.
+    private func energyLine(_ wh: Double, partial: Bool) -> String {
+        partial ? "\(Format.wh(wh)) (Claude Code only)" : Format.wh(wh)
     }
 
     private func dayLabel(_ d: Date) -> String {

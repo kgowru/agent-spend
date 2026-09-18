@@ -4,7 +4,7 @@
 
 # AgentSpend
 
-**A macOS menu bar app that shows what your Claude Code usage costs and an estimate of the electricity behind it. Updated live as you work.**
+**A macOS menu bar app that shows what your coding agents cost, split by agent, plus an estimate of the electricity behind it. Updated live as you work.**
 
 So "switch to a cheaper model" becomes a decision you can put a number on, instead of a hunch.
 
@@ -20,14 +20,17 @@ So "switch to a cheaper model" becomes a decision you can put a number on, inste
 
 ## What it is
 
-AgentSpend reads Claude Code's own local logs at `~/.claude/projects` and shows
-what your usage costs, in money and in modelled electricity. It runs entirely
-on your Mac: **no API keys, no account, no telemetry.** It picks up your usage
-automatically and updates while you work.
+AgentSpend reads the logs your coding agents already write on your Mac and shows
+what they cost, broken down by agent. Claude Code and Codex are read directly;
+sixteen more agent CLIs are read through a bundled copy of
+[ccusage](https://github.com/ccusage/ccusage). It runs entirely on your Mac:
+**no API keys, no account, no telemetry.** It picks up your usage automatically
+and updates while you work.
 
-Native Swift, zero external dependencies (SQLite comes from the system). A ~1 MB
-universal binary that sits at 0% CPU when idle. A tool that burns power to
-report power would be a bad joke.
+Native Swift. No runtime, no framework, no Electron: a universal binary that
+sits at 0% CPU when idle, alongside a copy of
+[ccusage](https://github.com/ccusage/ccusage) for the agents it has no parser of
+its own for. A tool that burns power to report power would be a bad joke.
 
 ## Install
 
@@ -52,7 +55,20 @@ popover swaps the menu bar between cost and energy. Quit from there too.
 
 ## How much to trust these numbers
 
-**The dollars are exact. The energy is an estimate.**
+**The dollars are exact arithmetic on published rates. The energy is an
+estimate, and it is shown for Anthropic models only.**
+
+If you are on a flat-rate plan (Claude Max, Pro, Team, a ChatGPT plan), the
+dollar figure is what the same tokens would cost at API rates, not what you were
+charged. The app reads your plan from Claude Code's own config and says so under
+the headline, because the gap is large: a fortnight reading $2,272 costs about
+$50 on Claude Max 5x. It is the right number for comparing one model against
+another, and the wrong number to call a bill.
+
+Energy for non-Anthropic models is withheld rather than guessed. Their tier
+would have to be inferred from price, and price does not track compute across
+vendors, so a figure would be directionally unreliable rather than merely
+uncertain.
 
 No AI company publishes how much power a token takes. So every energy figure
 you'll see anywhere, including this one, is an estimate.
@@ -79,7 +95,7 @@ open build/AgentSpend.app
 Checks you can run:
 
 ```bash
-./.build/release/AgentSpend --selftest   # 74 assertions
+./.build/release/AgentSpend --selftest   # 158 assertions
 ./.build/release/AgentSpend --verify     # aggregates, diffable against the Python oracle
 ./.build/release/AgentSpend --render <dir>   # render each pane to PNG
 ./.build/release/AgentSpend --window     # the panes in an ordinary window

@@ -23,6 +23,12 @@ final class UsageEngine: ObservableObject {
     /// app exists to point at.
     private var byID: [String: UsageRecord] = [:]
 
+    /// How the tokens are actually paid for, so the headline can say whether it
+    /// is a bill or a list-price equivalent. Detected once: the plan does not
+    /// change while the app is open, and re-reading the file per render would
+    /// touch it thousands of times to learn nothing new.
+    let billing = Billing.detect()
+
     private(set) var estimator: Estimator
     private var index: FileIndex
     private let store: UsageStore
@@ -196,6 +202,17 @@ final class UsageEngine: ObservableObject {
 
     func records(since: Date) -> [UsageRecord] {
         records.filter { ($0.timestamp ?? .distantPast) >= since }
+    }
+
+    /// True when some of these records have no energy basis, so any watt-hour
+    /// total for them covers only part of the spend.
+    ///
+    /// `totalWattHours` coerces a missing figure to zero, which is the right
+    /// arithmetic and the wrong label: silently summing a subset and presenting
+    /// it as the whole is the failure this app exists to argue against. Callers
+    /// that show a total must ask this and say so.
+    func energyIsPartial(_ rs: [UsageRecord]) -> Bool {
+        rs.contains { estimator.wattHours($0) == nil }
     }
 
     func totalWattHours(_ rs: [UsageRecord], at edge: Band.Edge = .v) -> Double {
