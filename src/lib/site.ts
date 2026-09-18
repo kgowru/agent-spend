@@ -34,11 +34,11 @@ export const SITE_URL =
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : "http://localhost:3000");
 
-export const VERSION = "v0.1.1";
+export const VERSION = "v0.1.3";
 
 /** Feeds the meta and OG description, so it has to stay under ~155 characters. */
 export const TAGLINE =
-  "See what your Claude Code usage costs in dollars, plus an estimate of the energy behind it, and learn habits that reduce your spend.";
+  "See what your coding agents cost, split by agent, plus an estimate of the energy behind it, and learn habits that reduce your spend.";
 
 export const TRUST = [
   {
@@ -47,7 +47,7 @@ export const TRUST = [
   },
   {
     title: "No API key, no account",
-    body: "Nothing to configure. It finds your usage in ~/.claude/projects and picks it up automatically.",
+    body: "Nothing to configure. It finds the logs your agents already write and picks them up automatically.",
   },
   {
     title: "Stays on your Mac",
@@ -70,27 +70,27 @@ export const TRUST = [
 export const FAQ = [
   {
     q: "Do I need an API key or an account?",
-    a: "No. It reads Claude Code's own logs on your Mac. No keys, no account, no network calls.",
+    a: "No. It reads the logs your agents already write on your Mac. No keys, no account, no network calls.",
   },
   {
     q: "I'm on a Pro or Max subscription. Will the dollars match my bill?",
-    a: "The figure is what your usage would cost at Anthropic's published API rates. On a subscription it is a comparison number, not your invoice.",
+    a: "No, and the app says so. On a flat rate plan it reads your tier from Claude Code's own config and labels the figure list price, not your bill. It is the right number for comparing one model against another, and the wrong one to call an invoice.",
   },
   {
     q: "Does it work on Intel Macs?",
-    a: "Yes. The release is a universal binary of about 3 MB covering Apple Silicon and Intel. It needs macOS 14 or later.",
+    a: "Yes. The release is a universal binary covering Apple Silicon and Intel, about 7 MB. It needs macOS 14 or later.",
   },
   {
     q: "Where does my data go?",
-    a: "Nowhere. It makes no network calls. It reads your local Claude Code logs and writes a small database in your Application Support folder.",
+    a: "Nowhere. It makes no network calls beyond a daily version check you can switch off. It reads your local agent logs and writes a small database in your Application Support folder.",
   },
   {
     q: "Why is the energy a range instead of a number?",
     a: "Because a truthful energy figure is a range. Nobody publishes per-token energy for these models, so every figure out there is a model rather than a measurement. AgentSpend shows you every coefficient, its range and its source, and lets you drag the assumption that moves the total most.",
   },
   {
-    q: "Does it track Cursor or Codex?",
-    a: "Not today. It reads the logs Claude Code writes locally. If you don't use Claude Code, it will be empty.",
+    q: "Which agents does it track?",
+    a: "Claude Code and Codex are read directly. Sixteen more agent CLIs are read through a bundled copy of ccusage, including Gemini, GitHub Copilot, OpenCode, Amp, Droid, Goose and Qwen. Each appears as soon as you use it. Cursor is not supported: it bills per request on the server and its local token data is too incomplete to trust.",
   },
   {
     q: "How do I uninstall it?",
@@ -98,6 +98,6 @@ export const FAQ = [
   },
   {
     q: "Is this an Anthropic product?",
-    a: "No. It reads logs Claude Code writes locally, but it is an independent project with no affiliation to Anthropic.",
+    a: "No. It reads logs these tools write locally, but it is an independent project with no affiliation to Anthropic, OpenAI, Google, GitHub or any other vendor it reads.",
   },
 ] as const;

@@ -1,61 +1,57 @@
-## AgentSpend v0.1.2
+## AgentSpend v0.1.3
 
-AgentSpend now tracks more than Claude Code, and it corrects two prices that
-were wrong.
+An honesty pass. Three numbers were saying more than they could support, and
+this release makes each of them say what it actually knows.
 
-### Your numbers will change, on purpose
+### The headline is not your bill, and now it says so
 
-Two pricing fixes move historical figures, so past screenshots will not match:
+If you are on a flat rate plan, the dollar figure is what the same tokens would
+cost at API rates. It is not money you were charged, and the gap is large: a
+fortnight reading $2,272 costs about $50 on Claude Max 5x.
 
-- **Claude Sonnet 5 was overcharged by 50%.** It was priced at $3/$15 per
-  million tokens. The published price is $2/$10: the increase planned for
-  September was cancelled and the launch price made permanent.
-- **Claude Opus 5 is no longer flagged as unrecognized.** It was treated as a
-  model with no published price, which put a warning on the largest share of
-  most people's usage. The price it was guessing turned out to be the right one,
-  so the figure does not move, but the warning goes away.
+AgentSpend now reads your plan from the config Claude Code already writes, and
+labels the figure accordingly:
 
-Cache reads on Fable 5.1 and Mythos 5.1 are also corrected, from a tenth of the
-input rate to a fortieth, which is what those models actually bill.
+> List price, not your bill. You are on Claude Max 5x, which is flat rate.
 
-### More than one agent
+Four keys are read from `~/.claude.json`, none is stored, logged, or sent
+anywhere. If you are billed per token, nothing changes and no caveat appears,
+because then the number really is your spend.
 
-- **Codex** is read directly, from `~/.codex/sessions`.
-- **Fourteen more agent CLIs** are read through a copy of
-  [ccusage](https://github.com/ccusage/ccusage) bundled inside the app: OpenCode,
-  Amp, Droid, Codebuff, Hermes, pi, Goose, Kilo, GitHub Copilot, Gemini, Kimi,
-  Qwen, OpenClaw, and Grok. They appear as soon as you use them, and stay out of
-  the way until then.
+### Energy is no longer shown for non-Anthropic models
 
-Nothing is downloaded or installed to make this work, and no network call was
-added. The bundled copy runs offline.
+It used to show watt-hours for Codex models. It should not have. Those figures
+came from a tier inferred from price, and price does not track compute across
+vendors: `gpt-5-codex` lists below Claude Opus 4.5 despite being a flagship, and
+DeepSeek measures around eight times GPT-4o per query while listing about ten
+times cheaper. The sign is wrong, not just the size.
 
-### Seeing where it went
+So energy for those models is withheld rather than guessed, and any total that
+covers a mix now says "Claude Code only" instead of quietly presenting a part as
+the whole. Cost for those models is unaffected and still exact.
 
-The daily and hourly charts are now split by agent, each with its own colour and
-logo. Hover any bar for that day's breakdown by agent. The Home panel opens on
-Today every time, rather than on whichever window you last looked at.
+### The README was wrong about the download
+
+It claimed a "~1 MB universal binary". The binary has not been that size for a
+while, and since v0.1.2 the download also carries a copy of ccusage. That claim
+is gone, along with several other lines that still described a Claude Code only
+app.
 
 ### Install
 
 Download **`AgentSpend.dmg`** below, open it, and drag AgentSpend to
 Applications. Signed with an Apple Developer ID and notarized by Apple, so it
-opens with no Gatekeeper warning. Universal binary, Apple Silicon and Intel.
+opens with no Gatekeeper warning. Universal binary, Apple Silicon and Intel,
+about 7 MB.
 
-The download is now about 7 MB rather than 3 MB. The bundled ccusage accounts for
-all of that. Claude Code and Codex are still read by AgentSpend's own code, which
-is both faster and more accurate for those two.
-
-Upgrading from v0.1.1: replace the copy in Applications. Existing history is kept
-and upgraded in place on first launch.
+Upgrading from v0.1.2: replace the copy in Applications. Nothing to migrate.
 
 ### How much to trust these numbers
 
-The dollars are exact arithmetic on published rates. The energy is an estimate,
-and is shown for Claude models only. Energy for other vendors is left blank
-rather than guessed, because the tier a model belongs to is inferred from its
-price, and price does not track compute across vendors. The Method pane shows
-every coefficient and its source.
+The dollars are exact arithmetic on published rates, and are a list price
+equivalent rather than an invoice if you are on a subscription. The energy is an
+estimate, shown for Anthropic models only. The Method pane shows every
+coefficient, its range, and its source.
 
 Makes no network calls beyond the once-a-day version check, which you can turn
 off. Independent project, not affiliated with Anthropic, OpenAI, Google, GitHub,

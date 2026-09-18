@@ -105,8 +105,27 @@ struct Estimator: Sendable {
     /// never reach the unrecognized-model banner — the exact silent-zeroing
     /// failure `Resources/README.md` forbids.
     func hasCoefficients(for model: String) -> Bool {
-        guard tierByModel[model] != nil, let price = prices[model] else { return false }
+        guard let price = prices[model] else { return false }
         return price.cache != nil || pricing.cacheMultipliers(for: price.provider) != nil
+    }
+
+    /// Whether an energy figure can honestly be produced for this model.
+    ///
+    /// Deliberately separate from pricing. A model can be priced exactly and
+    /// still have no defensible energy basis, which is the case for every
+    /// non-Anthropic model here: the tier is inferred from price, and price does
+    /// not track compute across vendors. `gpt-5-codex` lists below
+    /// `claude-opus-4-5` despite being a flagship, and DeepSeek measures around
+    /// 8x GPT-4o per query while listing about 10x cheaper. The sign is wrong,
+    /// not just the magnitude, so those models carry `basis: "withheld"` and get
+    /// a dash rather than a number.
+    ///
+    /// Conflating the two is what the old single check did, and it would have
+    /// put withheld-energy models into the "no coefficients, counted as ZERO"
+    /// banner, which is false: their dollars are exact.
+    func hasEnergyBasis(for model: String) -> Bool {
+        guard let entry = entryByModel[model], entry.basis != "withheld" else { return false }
+        return tierByModel[model] != nil
     }
 
     /// Model metadata (tier, confidence) — O(1), cached.
@@ -115,7 +134,7 @@ struct Estimator: Sendable {
     /// Watt-hours at the given band edge. `nil` when the model is unrecognized
     /// — callers must surface that rather than coercing it to zero.
     func wattHours(_ r: UsageRecord, at edge: Band.Edge = .v) -> Double? {
-        guard let t = tierByModel[r.model] else { return nil }
+        guard hasEnergyBasis(for: r.model), let t = tierByModel[r.model] else { return nil }
         let eIn = t.whPer1kInput.at(edge)
         let eOut = t.whPer1kOutput.at(edge)
         let readFactor = cacheReadFactorOverride ?? energy.defaults.cacheReadFactor.at(edge)

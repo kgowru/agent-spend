@@ -1,4 +1,5 @@
 import { C, Headline, Label, NUM, Rule, Screen, Segmented } from "./chrome";
+import { AGENTS } from "./agents";
 
 /*
  * The home pane on its 14 day window: TodayView's `periodSection` plus the
@@ -6,50 +7,75 @@ import { C, Headline, Label, NUM, Rule, Screen, Segmented } from "./chrome";
  * the type stays vector instead of being a capture scaled down until it goes
  * soft.
  *
- * Every figure here is read off the real render of the pane, which was drawn
- * from the synthetic demo store (tools/seed-demo-store.py). The per day costs
- * below reconstruct that store: they sum to the $87 headline, the largest is
- * the "peak $14", the last five match the table rows, and today over their
- * average is the 1.3x the pane reports.
+ * The colours and logo paths are NOT written here. They come from `agents.ts`,
+ * which tools/sync-site-agents.py generates out of the app's own
+ * AgentPalette.swift and AgentLogos.swift, so the marketing screen cannot drift
+ * from what the app draws.
+ *
+ * Every figure is invented but internally consistent: the per agent splits sum
+ * to each day's total, the days sum to the $267 headline, the largest is the
+ * "peak $41", and the table rows match the last five bars.
  */
 
-/** The pane's scope picker. 1d swaps the whole body for today's own view; the
- *  three period windows differ only in how much history they cover. */
 const SCOPES = ["1d", "14d", "30d", "90d"] as const;
 
-/** Daily cost, oldest (Sep 1) to newest (today). */
-const DAILY_USD = [
-  6.4, 14.4, 6.54, 13.94, 0.53, 0.81, 5.86, 4.67, 8.4, 9.26, 6.09, 1.81, 0.87,
-  7.85,
+/** Per day, per agent, oldest to newest. Index matches AGENTS. */
+const DAILY: number[][] = [
+  [14.2, 3.1, 1.2, 0.0],
+  [26.4, 6.8, 2.4, 1.1],
+  [12.9, 2.2, 0.0, 0.6],
+  [24.1, 7.4, 3.0, 1.3],
+  [1.2, 0.0, 0.4, 0.0],
+  [2.4, 0.6, 0.0, 0.0],
+  [13.8, 4.1, 1.9, 0.8],
+  [10.2, 2.8, 0.0, 0.5],
+  [18.6, 5.2, 2.1, 1.0],
+  [30.4, 7.9, 2.6, 0.0],
+  [15.1, 3.4, 1.1, 0.7],
+  [4.3, 1.1, 0.0, 0.0],
+  [2.1, 0.5, 0.3, 0.0],
+  [17.9, 4.6, 1.8, 0.9],
 ];
 
-const PEAK = Math.max(...DAILY_USD);
+const DAY_TOTAL = DAILY.map((d) => d.reduce((a, b) => a + b, 0));
+const PEAK = Math.max(...DAY_TOTAL);
 
 /** Chart height in px. The app draws 54pt of bar; this is that at our scale. */
 const CHART_H = 70;
-
 /** The app floors a bar at 2pt so a quiet day still reads as a day, not a gap. */
 const MIN_BAR = 2;
 
-type Row = {
-  day: string;
-  project: string;
-  cost: string;
-  energy: string;
-  reqs: string;
-};
+/** The agent's mark at legend size: its logo, or its initial where none exists. */
+function Mark({ i, size = 10 }: { i: number; size?: number }) {
+  const a = AGENTS[i];
+  if (!a.path) {
+    return (
+      <span
+        aria-hidden="true"
+        className="inline-flex items-center justify-center font-bold"
+        style={{ width: size, height: size, fontSize: size * 0.8, color: a.color }}
+      >
+        {a.label[0]}
+      </span>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path d={a.path} fill={a.color} />
+    </svg>
+  );
+}
 
-/** Newest first, as the app lists them: the recent days are the actionable ones. */
+type Row = { day: string; project: string; cost: string; energy: string; reqs: string };
+
 const ROWS: Row[] = [
-  { day: "Today", project: "api-gateway", cost: "$7.85", energy: "375 Wh", reqs: "139" },
-  { day: "Yesterday", project: "storefront", cost: "$0.87", energy: "42 Wh", reqs: "12" },
-  { day: "Sat, Sep 12", project: "api-gateway", cost: "$1.81", energy: "86 Wh", reqs: "28" },
-  { day: "Fri, Sep 11", project: "api-gateway", cost: "$6.09", energy: "291 Wh", reqs: "109" },
-  { day: "Thu, Sep 10", project: "storefront", cost: "$9.26", energy: "445 Wh", reqs: "158" },
+  { day: "Today", project: "api-gateway", cost: "$25.20", energy: "1.1 kWh", reqs: "412" },
+  { day: "Yesterday", project: "storefront", cost: "$2.90", energy: "128 Wh", reqs: "47" },
+  { day: "Sat, Sep 12", project: "api-gateway", cost: "$5.40", energy: "241 Wh", reqs: "88" },
+  { day: "Fri, Sep 11", project: "api-gateway", cost: "$20.30", energy: "902 Wh", reqs: "331" },
+  { day: "Thu, Sep 10", project: "storefront", cost: "$40.90", energy: "1.8 kWh", reqs: "664" },
 ];
 
-/* The app's fixed column frames (58 / 64 / 40pt), so the numbers stack into
- * columns whatever width the tile happens to be. */
 const COST_W = "w-[56px] sm:w-[70px]";
 const ENERGY_W = "w-[60px] sm:w-[76px]";
 const REQS_W = "w-[38px] sm:w-[48px]";
@@ -57,58 +83,89 @@ const REQS_W = "w-[38px] sm:w-[48px]";
 export function ScreenToday() {
   return (
     <Screen className="gap-4 p-4">
-      {/* The window the rest of the pane is reporting on, so it comes first:
-       * the app puts the picker above the headline precisely so the control
-       * reads as the input to the number under it. 14d is where it opens. */}
+      {/* 1d is where it opens, every time: the question a glance at the menu
+       * bar asks is "what am I spending right now". */}
       <Segmented options={SCOPES} selected="14d" />
 
-      {/* Period total on the left, today on the right, both label over figure. */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-px">
           <Label>Last 14 days</Label>
-          <Headline>$87</Headline>
-          <Label>4.2 kWh · 1,498 requests</Label>
-          <Label tone={C.tertiary}>≈ 3.5 hours of a typical US home</Label>
+          <Headline>$267</Headline>
+          {/* Energy is Anthropic-only, and the app says so rather than
+           * presenting a partial total as the whole. */}
+          <Label>7.8 kWh (Claude Code only) · 2,418 requests</Label>
+          <Label tone={C.tertiary}>≈ 6.4 hours of a typical US home</Label>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-px text-right">
           <Label>Today</Label>
-          <Headline>$7.85</Headline>
-          {/* Tertiary while today is close to the window's average; the app
-           * only turns this orange past 1.5x. */}
+          <Headline>$25.20</Headline>
           <Label tone={C.tertiary}>1.3× the 14d avg</Label>
         </div>
       </div>
 
-      {/* Daily cost. Today is tinted so it reads against the rest at a glance. */}
-      <div className="flex flex-col gap-1">
-        <Label tone={C.tertiary}>Hover a bar for that day</Label>
+      {/* What the number actually is. On a flat rate plan it is a list price
+       * equivalent, and the gap is large enough that leaving it unsaid is the
+       * biggest overstatement the app could make. */}
+      <Label tone={C.tertiary} className="leading-snug">
+        List price, not your bill. You are on Claude Max 5x, which is flat rate.
+      </Label>
 
+      <div className="flex flex-col gap-1">
         <div
           aria-hidden="true"
           className="flex items-end gap-[3px]"
           style={{ height: CHART_H }}
         >
-          {DAILY_USD.map((usd, i) => (
-            <div
-              key={i}
-              className="flex-1 rounded-[1px]"
-              style={{
-                height: Math.max(MIN_BAR, (CHART_H * usd) / PEAK),
-                background: i === DAILY_USD.length - 1 ? C.orange : C.blue,
-              }}
-            />
-          ))}
+          {DAILY.map((day, i) => {
+            const total = DAY_TOTAL[i];
+            const h = Math.max(MIN_BAR, (CHART_H * total) / PEAK);
+            return (
+              <div
+                key={i}
+                className="flex flex-1 flex-col justify-end overflow-hidden rounded-t-[2px]"
+                style={{ height: h }}
+              >
+                {/* Top down, so the rounded cap lands on the topmost segment.
+                 * Palette order, never that day's ranking: a stack that
+                 * re-sorted would put a different agent at the same height on
+                 * neighbouring bars, which is the comparison the eye makes. */}
+                {day
+                  .map((usd, a) => ({ usd, a }))
+                  .filter((s) => s.usd > 0)
+                  .reverse()
+                  .map(({ usd, a }) => (
+                    <div
+                      key={a}
+                      style={{
+                        height: `${(usd / total) * 100}%`,
+                        background: AGENTS[a].color,
+                      }}
+                    />
+                  ))}
+              </div>
+            );
+          })}
         </div>
 
         <div className="flex items-baseline justify-between">
           <Label tone={C.tertiary}>Sep 1</Label>
           <Label tone={C.tertiary} className="tabular-nums">
-            peak $14
+            peak $41
           </Label>
+        </div>
+
+        {/* Identity is never colour alone: the legend is always present, and in
+         * the app hovering a bar swaps it for that day's per agent split. */}
+        <div className="mt-[2px] flex flex-wrap items-center gap-x-3 gap-y-1">
+          {AGENTS.map((a, i) => (
+            <span key={a.key} className="inline-flex items-center gap-[4px]">
+              <Mark i={i} />
+              <Label>{a.label}</Label>
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Day table. */}
       <div className="flex flex-col gap-[5px]">
         <div
           className="flex items-baseline gap-[10px] text-[11px]"
@@ -150,56 +207,6 @@ export function ScreenToday() {
             </span>
           </div>
         ))}
-      </div>
-
-      {/* The rest of the pane: the period's shape in one line, then Home's own
-       * strip of today's advice, then the caveat that applies to every figure
-       * above it. */}
-      <div className="flex flex-col gap-[14px] pt-[14px]">
-        <Rule />
-        <div
-          className="flex items-baseline justify-between gap-3 text-[12px]"
-          style={{ color: C.secondary }}
-        >
-          <span>14 active days</span>
-          <span style={NUM}>$6.25 · 300 Wh per active day</span>
-        </div>
-
-        <Rule />
-
-        <div className="flex flex-col gap-[7px]">
-          <div className="flex items-baseline justify-between gap-3">
-            <Label>Worth a look today</Label>
-            <span className="text-[11px]" style={{ color: C.blue }}>
-              all savings ›
-            </span>
-          </div>
-          <div
-            className="rounded-md px-2 py-[5px]"
-            style={{ background: C.inset }}
-          >
-            <div className="flex items-baseline gap-[6px]">
-              <span className="min-w-0 flex-1 text-[12px] font-medium">
-                Try Sonnet 5 as the default, reserving Opus/Fable for hard work
-              </span>
-              <span
-                className="shrink-0 text-[12px]"
-                style={{ color: C.green, ...NUM }}
-              >
-                ~$0.61
-              </span>
-            </div>
-            <p className="mt-[2px] text-[11px]" style={{ color: C.secondary }}>
-              77% of your spend ($6.07) is on top-tier models. Sonnet 5 is
-              roughly half the energy and a third of the price per token.
-            </p>
-          </div>
-        </div>
-
-        <p className="text-[11px]" style={{ color: C.tertiary }}>
-          Cost is exact, from published rates. Energy is a modelled estimate and
-          was consumed in a datacenter, not on your Mac.
-        </p>
       </div>
     </Screen>
   );

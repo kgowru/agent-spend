@@ -217,74 +217,86 @@
     {
       "id": "gpt-5.6-sol",
       "tier": "frontier-large",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.6-terra",
       "tier": "frontier-mid",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.6-luna",
       "tier": "frontier-small",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.5",
       "tier": "frontier-large",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.4",
       "tier": "frontier-mid",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.4-mini",
       "tier": "frontier-mid",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.3-codex",
       "tier": "frontier-mid",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.2",
       "tier": "frontier-mid",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.1",
       "tier": "frontier-mid",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5",
       "tier": "frontier-mid",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5-mini",
       "tier": "frontier-small",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5-nano",
       "tier": "frontier-small",
-      "basis": "tier-proxy",
-      "confidence": "low"
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     }
   ],
   "caveats": [
@@ -295,7 +307,8 @@
     "Context length is not free. The same 500-token output costs ~0.3 Wh at short context and ~40 Wh at 100k input, because prefill attention is O(n^2) and every decode step re-reads a growing KV cache.",
     "Excludes model training energy entirely.",
     "This electricity was consumed in a datacenter, not on your machine.",
-    "Figures decay fast. Google reported a 33x energy reduction in 12 months. Everything here is timestamped."
+    "Figures decay fast. Google reported a 33x energy reduction in 12 months. Everything here is timestamped.",
+    "Energy is shown for Anthropic models only. Other vendors' models are priced exactly but carry basis 'withheld', because their tier would be inferred from price and price inverts against compute across vendors. A cross-vendor watt-hour total is never shown."
   ],
   "equivalences": {
     "note": "EPA/DOE-verified factors. usHomeKwhPerDay is the primary anchor used in the UI \u2014 at tens-to-hundreds of kWh, a home is the only relatable frame (a phone charge or kettle would be thousands of units). The other factors are kept as sourced reference. Deliberately excludes the debunked '0.3 Wh per Google search' (2009, ~17 years stale) and '4.6 t CO2/vehicle/year' (EPA's current figure is 4.29 t) zombie stats.",
