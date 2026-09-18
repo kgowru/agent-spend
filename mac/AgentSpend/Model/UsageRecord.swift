@@ -1,12 +1,38 @@
 import Foundation
 
-/// One deduplicated API request, as recovered from a Claude Code session log.
+/// Which agent CLI a record came from.
+///
+/// Carried on every record because the two tools disagree on things the
+/// arithmetic depends on — most importantly whether a reported input count
+/// already includes the cached tokens (Codex) or excludes them (Claude Code),
+/// and whether cache writes are billable at all. A record that has lost track
+/// of its origin cannot be priced correctly.
+enum Provider: String, Sendable, Equatable, CaseIterable, Codable {
+    case claude
+    case codex
+
+    /// What the user calls it.
+    var displayName: String {
+        switch self {
+        case .claude: return "Claude Code"
+        case .codex:  return "Codex"
+        }
+    }
+}
+
+/// One deduplicated API request, as recovered from an agent CLI session log.
+///
+/// The field names follow Anthropic's split — `input` is *uncached* input and
+/// `cacheRead` is separate. Parsers for tools that report a cache-inclusive
+/// input (Codex does) must subtract before constructing a record, so that
+/// everything downstream can assume one convention.
 struct UsageRecord: Sendable, Equatable {
-    var id: String            // message.id — the dedup key
+    var id: String            // dedup key — message.id for Claude, synthesized for Codex
+    var provider: Provider
     var timestamp: Date?
     var model: String         // date-suffix normalized
-    var input: Int
-    var output: Int
+    var input: Int            // uncached input only
+    var output: Int           // includes reasoning tokens, which are a subset
     var cacheWrite: Int
     var cacheWrite5m: Int
     var cacheWrite1h: Int
@@ -71,8 +97,16 @@ struct Estimator: Sendable {
         self.entryByModel = entries
     }
 
+    /// Whether this model can be both priced and costed in energy.
+    ///
+    /// Cache terms count. `cost` needs them as much as it needs a rate, and
+    /// without this check a provider whose terms were never added would return
+    /// nil from `cost`, get coerced to zero by every aggregating caller, and
+    /// never reach the unrecognized-model banner — the exact silent-zeroing
+    /// failure `Resources/README.md` forbids.
     func hasCoefficients(for model: String) -> Bool {
-        tierByModel[model] != nil && prices[model] != nil
+        guard tierByModel[model] != nil, let price = prices[model] else { return false }
+        return price.cache != nil || pricing.cacheMultipliers(for: price.provider) != nil
     }
 
     /// Model metadata (tier, confidence) — O(1), cached.
@@ -94,9 +128,17 @@ struct Estimator: Sendable {
     }
 
     /// USD from published per-MTok rates.
+    ///
+    /// Cache terms key off the *model's* vendor, not the record's, and fall back
+    /// to that vendor's default only when the model states no terms of its own.
+    /// OpenAI bills nothing for a cache write where Anthropic charges up to 2x,
+    /// and OpenAI is not even internally consistent — GPT-5.6 introduced a write
+    /// charge its predecessors did not have. Keying off the model makes a
+    /// record whose model was swapped without its provider price correctly
+    /// anyway, rather than relying on every call site to keep the two in step.
     func cost(_ r: UsageRecord) -> Double? {
-        guard let p = prices[r.model] else { return nil }
-        let m = pricing.cacheMultipliers
+        guard let p = prices[r.model],
+              let m = p.cache ?? pricing.cacheMultipliers(for: p.provider) else { return nil }
         // Split the write by TTL when the breakdown is present: the 1h premium
         // is 2x vs the 5m 1.25x, and Claude Code leans on 1h caching.
         let write: Double
@@ -116,6 +158,9 @@ struct Estimator: Sendable {
     /// An **upper bound** on savings: it holds turn count fixed, and a smaller
     /// model may need more turns to reach the same result. Never present the
     /// result as free.
+    /// Swapping the model is enough: `cost` resolves cache terms from the
+    /// substitute model's own vendor, so a cross-vendor replay already picks up
+    /// the right contract without the record's `provider` being touched.
     func counterfactual(_ records: [UsageRecord], as model: String) -> (wh: Double, usd: Double) {
         var wh = 0.0, usd = 0.0
         for r in records {

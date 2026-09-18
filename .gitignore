@@ -44,6 +44,11 @@ next-env.d.ts
 mac/.build/
 mac/build/
 
+# Vendored ccusage sidecar. Fetched and hash-verified by mac/vendor-ccusage.sh
+# from the pin in mac/ccusage-lock.json, so it is reproducible rather than
+# committed. A 7 MB binary does not belong in git history.
+mac/vendor/
+
 # Python
 __pycache__/
 *.pyc

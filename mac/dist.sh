@@ -25,7 +25,12 @@ lipo -create -output "$APP/Contents/MacOS/AgentSpend" \
 
 # 2. Re-sign (the binary changed) and package with ditto — plain `zip` mangles
 #    bundle metadata and the signature; ditto is what Apple's tooling expects.
-codesign --force --deep --sign - "$APP"
+# Inside-out, nested code first, and no `--deep`: it is deprecated, and it signs
+# nested binaries as a side effect of the outer invocation rather than on their
+# own terms. The lipo above only replaced the main executable, but the bundle
+# signature seals the helper too, so both have to be re-established in order.
+codesign --force --sign - "$APP/Contents/Helpers/ccusage"
+codesign --force --sign - "$APP"
 rm -f build/AgentSpend.zip
 ditto -c -k --keepParent "$APP" build/AgentSpend.zip
 

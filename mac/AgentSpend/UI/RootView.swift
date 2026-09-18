@@ -1,8 +1,47 @@
 import SwiftUI
 
+/// Which build this is.
+///
+/// Keyed off the bundle identifier rather than a compile flag, because the thing
+/// that actually needs distinguishing is two *installed copies* running side by
+/// side, and `dev.sh` is what gives the dev copy its own id. `#if DEBUG` would be
+/// the wrong test: a debug build installed over the release id would still need
+/// telling apart, and a release-config dev build would still be the dev one.
+enum AppBuild {
+    static let isDev = (Bundle.main.bundleIdentifier ?? "").hasSuffix(".dev")
+
+    /// True while `--render` is driving the view tree offscreen.
+    ///
+    /// The renderer sets `historyDays` itself to capture one image per window,
+    /// so anything that resets that key on appear has to stand down or every
+    /// snapshot comes out as the same day.
+    static let isSnapshotting = CommandLine.arguments.contains("--render")
+}
+
+/// Marks the popover as the dev copy.
+///
+/// Neutral ink on a faint fill, deliberately: every hue in this app now names a
+/// specific agent, so a badge wearing one would read as data. This is chrome, so
+/// it uses the same `Color.primary.opacity` treatment as the other chips.
+struct DevBadge: View {
+    var body: some View {
+        Text("DEV")
+            .font(.system(size: 9, weight: .bold, design: .rounded))
+            .kerning(0.4)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1.5)
+            .background(Color.primary.opacity(0.10), in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5))
+            .accessibilityLabel("Development build")
+    }
+}
+
 struct RootView: View {
     @ObservedObject var engine: UsageEngine
     @State private var tab: Tab
+    /// Shared with `TodayView`. Held here too so the panel can reset it on open.
+    @AppStorage("historyDays") private var days = 1
 
     /// `initialTab` lets the renderer snapshot each pane. Otherwise `--tab X`
     /// opens straight to one, which a screenshot can reach without needing
@@ -34,6 +73,21 @@ struct RootView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .padding(10)
+            // `maxWidth: .infinity` BEFORE the overlay, and it is load-bearing.
+            // A segmented picker sizes to its content, so without this the
+            // overlay anchors to the control's own trailing edge and the badge
+            // lands on top of the "Savings" tab. Widening to the panel first
+            // gives the overlay the full width to pin against.
+            .frame(maxWidth: .infinity)
+            // Overlaid rather than placed in the row: an HStack beside the
+            // picker would push the tabs off-centre on the dev copy, so the two
+            // builds would lay out differently. An overlay leaves the geometry
+            // identical, which is the point of a build marker.
+            .overlay(alignment: .topTrailing) {
+                if AppBuild.isDev {
+                    DevBadge().padding(.top, 9).padding(.trailing, 10)
+                }
+            }
 
             Divider()
 
@@ -61,6 +115,18 @@ struct RootView: View {
         // under `maxHeight`, say) can resolve that proposal to zero and render
         // an empty popover — which shipped once. A concrete frame can't.
         .frame(width: 420, height: 540)
+        // Open on Today, every time.
+        //
+        // `historyDays` is @AppStorage, so without this the panel reopens on
+        // whatever window you last clicked, which is usually not the one you
+        // want when you glance at the menu bar. The question a glance asks is
+        // "what am I spending right now", and that is the 1d view.
+        //
+        // Reset on appear rather than just defaulting the stored value: a
+        // default only helps the first launch, and MenuBarExtra re-runs onAppear
+        // each time the panel opens (the same hook HomeView uses to clear the
+        // recommendations badge).
+        .onAppear { if !AppBuild.isSnapshotting { days = 1 } }
         .background(
             // Records what the popover was actually laid out at, so the real
             // thing can be checked without needing to screenshot it. Neither

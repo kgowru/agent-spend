@@ -7,7 +7,72 @@ import Foundation
 /// parser bug in the Swift ingestor, not a modelling disagreement — both read
 /// the same coefficient JSON.
 enum CLI {
-    static func runVerify(root: URL) -> Int32 {
+    /// `AgentSpend --agents [store.sqlite] [agent,agent]`.
+    ///
+    /// Exercises the whole sidecar path: locate the bundled helper, run it once
+    /// per agent, parse, persist, read back. `only` overrides the agent list,
+    /// including with agents the sidecar does not normally own, which is how you
+    /// exercise the subprocess and parse path against real data on a machine
+    /// where none of the fourteen have any. It is a debugging affordance, not a
+    /// supported mode.
+    static func runAgents(storePath: URL?, only: [String]? = nil) -> Int32 {
+        guard let helper = CCUsageBridge.helperURL() else {
+            print("""
+                no ccusage helper found.
+                  Expected at Contents/Helpers/ccusage in the app bundle, or
+                  mac/vendor/ccusage in a dev checkout. Run mac/vendor-ccusage.sh.
+                """)
+            return 1
+        }
+        print("helper: \(helper.path)")
+        let list = only ?? CCUsageBridge.agents
+        if only != nil { print("override: \(list.joined(separator: ", "))") }
+
+        let clock = ContinuousClock()
+        var rows: [CCUsageBridge.DailyRow] = []
+        var errors: [String] = []
+        let elapsed = clock.measure {
+            for agent in list {
+                do { rows.append(contentsOf: try CCUsageBridge.collect(agent: agent)) }
+                catch { errors.append(String(describing: error)) }
+            }
+        }
+        let secs = Double(elapsed.components.seconds)
+            + Double(elapsed.components.attoseconds) / 1e18
+        print("scanned \(list.count) agents in \(String(format: "%.2f", secs))s, \(rows.count) rows")
+        for e in errors { print("  ! \(e)") }
+
+        do {
+            let path = try storePath ?? UsageStore.defaultLocation()
+            print("store:  \(path.path)")
+            let store = try UsageStore(path: path)
+            let written = try store.replaceExternal(rows)
+            print("wrote \(written) rows\n")
+
+            let summaries = try store.externalSummaries()
+            if summaries.isEmpty {
+                print("""
+                    No sidecar agent reported any usage.
+                      That is the expected result on a machine that only runs Claude
+                      Code and Codex, which are read natively and are not listed here.
+                    """)
+            } else {
+                print("agent        days  \(pad("tokens", 16))       cost  models")
+                for s in summaries {
+                    print("  \(s.agent.padding(toLength: 11, withPad: " ", startingAt: 0))"
+                          + " \(pad(s.days, 4))  \(pad(s.totals.total, 16))"
+                          + "  \(String(format: "%9.2f", s.usd))  "
+                          + s.models.prefix(3).joined(separator: ", "))
+                }
+            }
+            return errors.isEmpty ? 0 : 2
+        } catch {
+            print("store error: \(error)")
+            return 1
+        }
+    }
+
+    static func runVerify(root: URL, provider: Provider = .claude) -> Int32 {
         do {
             let (energyModel, pricing) = try Coefficients.load()
             var estimator = Estimator(energy: energyModel, pricing: pricing)
@@ -16,9 +81,9 @@ enum CLI {
             var stats = JSONLIngestor.Stats()
             let clock = ContinuousClock()
             var records: [UsageRecord] = []
+            let source = LogSource(provider: provider, root: root)
             let elapsed = clock.measure {
-                records = Array(JSONLIngestor.ingest(root: root, index: &index,
-                                                     stats: &stats).values)
+                records = Array(source.ingest(files: nil, index: &index, stats: &stats).values)
             }
 
             let gb = Double(stats.bytesRead) / 1e9

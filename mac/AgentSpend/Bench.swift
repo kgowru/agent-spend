@@ -10,7 +10,9 @@ import Foundation
 enum Bench {
     static func run() -> Int32 {
         do {
-            let engine = try UsageEngine()
+            // Detected sources rather than the Claude-only default, so the
+            // timings reflect the corpus the shipped app actually loads.
+            let engine = try UsageEngine(sources: LogSource.all())
             let n = engine.records.count
             guard n > 0 else { print("store empty — run the app once first"); return 1 }
             print("corpus: \(n) records\n")

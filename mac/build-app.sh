@@ -32,10 +32,22 @@ if [ ! -x "$BIN/AgentSpend" ]; then
   exit 1
 fi
 
+# The sidecar that reads the fourteen agent CLIs we have no native parser for.
+# Fetched and hash-verified here rather than committed, so the binary in a
+# release is always one a reviewer can reproduce from ccusage-lock.json.
+./vendor-ccusage.sh
+
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Helpers"
 
 cp "$BIN/AgentSpend" "$APP/Contents/MacOS/"
+
+# Helpers/, not MacOS/. Only CFBundleExecutable belongs in MacOS; a second
+# executable there is a codesign warning today and has been an outright
+# notarization failure in the past. Helpers/ is the documented home for a
+# bundled command line tool.
+cp vendor/ccusage "$APP/Contents/Helpers/ccusage"
+cp vendor/LICENSE-ccusage NOTICE-logos.md "$APP/Contents/Resources/"
 
 # Coefficient files go as loose resources directly in Contents/Resources, loaded
 # at runtime via Bundle.main. Do NOT ship SPM's nested AgentSpend_AgentSpend.bundle
@@ -71,9 +83,18 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Ad-hoc signature — enough to run locally. Distribution would need a real
-# Developer ID identity plus notarization.
-codesign --force --deep --sign - "$APP" 2>/dev/null || \
+# Ad-hoc signature, enough to run locally. Distribution needs a real Developer
+# ID identity plus notarization (see notarize.sh).
+#
+# Signed inside-out: the nested helper first, then the bundle, which seals it.
+# `--deep` is NOT used. Apple deprecated it, and it is the wrong tool here: it
+# re-signs nested code with the *outer* invocation's flags as an afterthought,
+# which is exactly how a helper ends up in a notarized app without the hardened
+# runtime actually applied to it. Signing each piece explicitly is the supported
+# order and makes the failure loud instead of silent.
+codesign --force --sign - "$APP/Contents/Helpers/ccusage" 2>/dev/null || \
+  echo "note: ad-hoc codesign of the ccusage helper failed"
+codesign --force --sign - "$APP" 2>/dev/null || \
   echo "note: ad-hoc codesign failed; the app will still run locally"
 
 echo "built $APP"

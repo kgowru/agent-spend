@@ -112,10 +112,15 @@ checked but not who, or what they spent. It never downloads or installs
 anything by itself. Switch it off with **Check for new versions** in the Method
 pane and the app makes no network calls at all.
 
-## Not affiliated with Anthropic
+## Not affiliated with any of these vendors
 
-AgentSpend reads logs that Claude Code writes locally, but it is an independent
-project and is not affiliated with, endorsed by, or sponsored by Anthropic.
+AgentSpend reads logs that coding agents write on your own machine, but it is an
+independent project and is not affiliated with, endorsed by, or sponsored by
+Anthropic, OpenAI, Google, GitHub, or any other vendor whose tools it reads.
+
+Each agent's logo appears beside its share of your spend, to show whose usage a
+figure represents. Those logos are the trademarks of their owners and are used
+for identification only. See [mac/NOTICE-logos.md](mac/NOTICE-logos.md).
 
 ## License
 

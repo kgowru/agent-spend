@@ -5,7 +5,7 @@ import SwiftUI
 /// today is just the top row.
 struct TodayView: View {
     @ObservedObject var engine: UsageEngine
-    @AppStorage("historyDays") private var days = 14
+    @AppStorage("historyDays") private var days = 1
     @State private var projectsExpanded = false
 
     var body: some View {
@@ -97,7 +97,8 @@ struct TodayView: View {
                 .font(.caption).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center).padding(.vertical, 20)
         } else {
-            HourlyBars(hours: engine.hourlyActivity(since: start))
+            HourlyBars(hours: engine.hourlyActivity(since: start),
+                       sidecar: engine.sidecarToday())
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
@@ -223,18 +224,59 @@ struct TodayView: View {
     }
 }
 
-/// Daily cost bars. Today is tinted so it reads against the rest at a glance.
-/// Hovering a bar reads out that day's spend; the rest dim so the focus is clear.
+/// Daily cost bars, stacked by agent.
+///
+/// Colour carries agent identity, which forces two changes from the old
+/// single-series chart:
+///
+///  - **Today is no longer tinted orange.** Orange is a palette slot now, so
+///    using it for recency would make one Tuesday look like a different tool.
+///    Today is marked with a dot under its bar instead, which is a channel
+///    nothing else is using.
+///  - **Segments are ordered by the palette, not by that day's size.** A stack
+///    that re-sorted per day would put a different agent at the same height on
+///    adjacent bars, which is precisely the comparison the eye tries to make.
+///
+/// Hovering a bar reads out that day's per-agent split; the rest dim so the
+/// focus is clear. The legend and the readout are what make the chart legible
+/// without relying on colour alone.
 struct DailyBars: View {
     let summaries: [UsageEngine.DaySummary]
     @State private var hovered: UsageEngine.DaySummary.ID?
 
+    /// Agents present anywhere in the window, in palette order. Driven by the
+    /// window rather than the hovered day so the legend does not reflow as the
+    /// pointer moves across the chart.
+    /// Gap between day slots, shared by the bars and the today-marker row so the
+    /// two stay aligned. Narrows on long windows: at 90 days a 2pt gap spends
+    /// 178pt of the 396pt available on whitespace, leaving each bar thinner than
+    /// the space beside it.
+    private var slotGap: CGFloat { summaries.count > 45 ? 1 : 2 }
+
+    private var present: [String] {
+        var seen = Set<String>()
+        for d in summaries { for s in d.slices where s.usd > 0 { seen.insert(s.agent) } }
+        return seen.sorted { AgentPalette.rank($0) < AgentPalette.rank($1) }
+    }
+
+    /// Render-only: forces a hovered bar so `--render` can capture the hover
+    /// state, which is otherwise unreachable in a static snapshot and is the
+    /// half of this chart that actually answers "how much was Gemini". Counted
+    /// from the end, so 0 is today. Unset in every normal launch.
+    private var previewHover: Int? {
+        ProcessInfo.processInfo.environment["AGENTSPEND_PREVIEW_HOVER"].flatMap(Int.init)
+    }
+
     var body: some View {
         let maxV = summaries.map(\.usd).max() ?? 0
-        let focus = summaries.first { $0.id == hovered }
+        let previewed = previewHover
+            .map { summaries.count - 1 - $0 }
+            .flatMap { summaries.indices.contains($0) ? summaries[$0].id : nil }
+        let active = hovered ?? previewed
+        let focus = summaries.first { $0.id == active }
 
         VStack(alignment: .leading, spacing: 3) {
-            // Readout line — reserves its own height so the layout doesn't jump
+            // Readout line. Reserves its own height so the layout does not jump
             // as the hover moves on and off the chart.
             Group {
                 if let d = focus {
@@ -242,34 +284,61 @@ struct DailyBars: View {
                     + Text("  \(Format.usd(d.usd)) · \(Format.wh(d.wh)) · "
                            + "\(Format.count(d.requests)) req").foregroundStyle(.secondary)
                 } else {
-                    Text("Hover a bar for that day").foregroundStyle(.tertiary)
+                    // Deliberately blank rather than a prompt. The line exists to
+                    // reserve height so the chart does not jump when the pointer
+                    // arrives; telling people to hover is instruction the chart
+                    // should not need, and it sat there on every pane load.
+                    Text(" ")
                 }
             }
             .font(.caption2).monospacedDigit().lineLimit(1)
 
-            HStack(alignment: .bottom, spacing: 2) {
+            HStack(alignment: .bottom, spacing: slotGap) {
                 ForEach(summaries) { d in
                     // Full-height, full-slot hover target so the thin bars and
                     // the gaps between them are all easy to land on.
                     ZStack(alignment: .bottom) {
                         Color.clear
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(Calendar.current.isDateInToday(d.day) ? Color.orange : Color.accentColor)
-                            .opacity(opacity(for: d))
-                            .frame(height: maxV == 0 ? 2 : max(2, 54 * d.usd / maxV))
+                        bar(for: d, maxV: maxV, active: active)
                     }
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                     .onHover { inside in
-                        // On exit, only clear if this bar was the focused one —
-                        // otherwise moving between adjacent bars would flicker.
+                        // On exit, only clear if this bar was the focused one, or
+                        // moving between adjacent bars would flicker.
                         if inside { hovered = d.id }
                         else if hovered == d.id { hovered = nil }
                     }
-                    .help("\(label(d.day)): \(Format.usd(d.usd)) · \(Format.wh(d.wh))")
+                    .help(tooltip(d))
                 }
             }
             .frame(height: 54)
+
+            // Today marker. A dot rather than a colour, because every colour is
+            // spoken for by an agent.
+            //
+            // The dot is an OVERLAY on a zero-minimum cell, not a sized view in
+            // the row. `Circle().frame(width: 3)` inside the stack is a hard
+            // minimum that cannot compress, so at 90 days it demanded
+            // 90*3 + 89*2 = 448pt against the 396pt the panel has and pushed the
+            // whole pane wider than its own window, clipping the headline on
+            // both sides. The bars row above never had that problem because its
+            // cells are `Color.clear` with only a height, which is exactly what
+            // this mirrors. An overlay is sized by its parent and contributes no
+            // width of its own.
+            HStack(alignment: .top, spacing: slotGap) {
+                ForEach(summaries) { d in
+                    Color.clear
+                        .frame(height: 3)
+                        .frame(maxWidth: .infinity)
+                        .overlay {
+                            if Calendar.current.isDateInToday(d.day) {
+                                Circle().fill(Color.secondary).frame(width: 3, height: 3)
+                            }
+                        }
+                }
+            }
+            .frame(height: 3)
 
             HStack {
                 Text(summaries.first.map { $0.day.formatted(.dateTime.month(.abbreviated).day()) } ?? "")
@@ -277,12 +346,90 @@ struct DailyBars: View {
                 if maxV > 0 { Text("peak \(Format.usd(maxV))") }
             }
             .font(.caption2).foregroundStyle(.tertiary)
+
+            // The per-agent split when hovering, the legend otherwise. Same slot,
+            // so the chart never grows or shrinks under the pointer.
+            Group {
+                if let d = focus, !d.slices.isEmpty {
+                    breakdown(d)
+                } else {
+                    legend
+                }
+            }
+            .frame(height: 14, alignment: .leading)
         }
     }
 
-    private func opacity(for d: UsageEngine.DaySummary) -> Double {
-        if d.usd == 0 { return 0.12 }
-        return hovered == nil || hovered == d.id ? 0.85 : 0.35
+    /// One day's stack. Segments are drawn top-down so the rounded cap lands on
+    /// the topmost one and the baseline stays square, and a 2pt surface gap
+    /// separates them, which is the secondary channel the palette's adjacent
+    /// pairs need.
+    @ViewBuilder
+    private func bar(for d: UsageEngine.DaySummary, maxV: Double,
+                     active: UsageEngine.DaySummary.ID?) -> some View {
+        let h = maxV == 0 ? 2 : max(2, 54 * d.usd / maxV)
+        if d.slices.isEmpty {
+            RoundedRectangle(cornerRadius: 1)
+                .fill(Color.secondary).opacity(0.12).frame(height: 2)
+        } else {
+            // The separator is a 1pt gap, and only on bars tall enough to spare
+            // it. At 54pt full scale a six-segment stack would otherwise spend
+            // 10pt of a short bar on gaps, so a quiet day would read as mostly
+            // background with a few floating chips. Below the threshold the
+            // colour boundary alone does the separating, which is what the
+            // legend and hover readout are there to back up.
+            let gap: CGFloat = h >= 18 ? 1 : 0
+            let usable = h - gap * CGFloat(max(0, d.slices.count - 1))
+            VStack(spacing: gap) {
+                ForEach(d.slices.reversed()) { s in
+                    AgentPalette.color(s.agent)
+                        // 1.5pt floor: a segment worth a few cents still has to
+                        // be visible, or the stack quietly stops adding up to
+                        // the number printed above it.
+                        .frame(height: max(1.5, usable * (s.usd / max(d.usd, 0.0001))))
+                }
+            }
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2))
+            .opacity(active == nil || active == d.id ? 1.0 : 0.3)
+        }
+    }
+
+    private var legend: some View {
+        HStack(spacing: 8) {
+            ForEach(present, id: \.self) { a in
+                HStack(spacing: 3) {
+                    AgentMark(agent: a, size: 9)
+                    // Text stays in ink, never the series colour: the mark
+                    // beside it already carries identity, and coloured labels
+                    // read as emphasis the data does not mean.
+                    Text(AgentPalette.label(a)).foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.caption2).lineLimit(1)
+    }
+
+    private func breakdown(_ d: UsageEngine.DaySummary) -> some View {
+        HStack(spacing: 8) {
+            ForEach(d.slices) { s in
+                HStack(spacing: 3) {
+                    AgentMark(agent: s.agent, size: 9)
+                    Text(AgentPalette.label(s.agent)).foregroundStyle(.secondary)
+                    Text(Format.usd(s.usd)).foregroundStyle(.primary).monospacedDigit()
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.caption2).lineLimit(1)
+    }
+
+    private func tooltip(_ d: UsageEngine.DaySummary) -> String {
+        let head = "\(label(d.day)): \(Format.usd(d.usd)) · \(Format.wh(d.wh))"
+        guard !d.slices.isEmpty else { return head }
+        return head + "\n" + d.slices
+            .map { "  \(AgentPalette.label($0.agent))  \(Format.usd($0.usd))" }
+            .joined(separator: "\n")
     }
 
     private func label(_ d: Date) -> String {
