@@ -15,6 +15,14 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 type Status = "idle" | "sending" | "sent" | "error";
 
+/*
+ * How long the card takes to open, in step with the duration class on the
+ * panel. The focus waits it out: focusing the textarea while the panel is still
+ * growing paints its focus ring across a half-clipped box, and asks the browser
+ * to scroll to an element that is still moving.
+ */
+const OPEN_MS = 360;
+
 const inputClasses =
   "w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-ink placeholder:text-muted/70 transition focus:border-white/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft";
 
@@ -24,9 +32,17 @@ export function Feedback() {
   const [error, setError] = useState<string | null>(null);
   const messageRef = useRef<HTMLTextAreaElement>(null);
 
-  // Drop focus into the message box as the card opens.
+  // Drop focus into the message box once the card has finished opening.
   useEffect(() => {
-    if (expanded) messageRef.current?.focus();
+    if (!expanded) return;
+
+    const id = window.setTimeout(
+      // The card is already on screen; the scroll would only fight the
+      // animation that just finished.
+      () => messageRef.current?.focus({ preventScroll: true }),
+      OPEN_MS,
+    );
+    return () => window.clearTimeout(id);
   }, [expanded]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -86,7 +102,13 @@ export function Feedback() {
           onClick={() => setExpanded((open) => !open)}
           aria-expanded={expanded}
           aria-controls="feedback-panel"
-          className="flex w-full items-center justify-between gap-4 p-8 text-left transition hover:bg-white/5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-spark-teal-soft sm:p-10"
+          /* The hover tint is for the collapsed card, where the button is the
+           * whole card. Left on while open it lights the header alone, drawing
+           * a hard lit band across the top of the form under the pointer that
+           * just opened it. */
+          className={`flex w-full items-center justify-between gap-4 p-8 text-left transition focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-spark-teal-soft sm:p-10 ${
+            expanded ? "" : "hover:bg-white/5"
+          }`}
         >
           <span>
             <span
@@ -104,7 +126,9 @@ export function Feedback() {
             aria-hidden="true"
             viewBox="0 0 16 16"
             fill="none"
-            className={`size-5 shrink-0 text-muted transition-transform duration-300 ${
+            /* Same duration as the panel, so the chevron and the card settle
+             * together rather than one landing 60ms before the other. */
+            className={`size-5 shrink-0 text-muted transition-transform duration-[360ms] ease-out motion-reduce:transition-none ${
               expanded ? "rotate-180" : ""
             }`}
           >
@@ -118,19 +142,32 @@ export function Feedback() {
           </svg>
         </button>
 
-        {/* grid-rows 0fr→1fr animates height without measuring. */}
+        {/* grid-rows 0fr→1fr animates height without measuring. Height only:
+         * fading the panel at the same time left the form legible while the
+         * edge was still cutting through the middle of it, so the textarea read
+         * as a torn sheet on the way out. */}
         <div
           id="feedback-panel"
           inert={!expanded}
-          className={`grid transition-all duration-300 ease-out ${
-            expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          className={`grid transition-[grid-template-rows] duration-[360ms] ease-out motion-reduce:transition-none ${
+            expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
           }`}
         >
           <div className="overflow-hidden">
             {/* Top padding lives inside the clipped panel so the form reveals
              * with clear space below the header instead of the textarea (and
              * its outward focus ring) butting straight up against it. */}
-            <div className="px-8 pt-6 pb-8 sm:px-10 sm:pt-8 sm:pb-10">
+            <div
+              /* The form rises into the space rather than being uncovered by
+               * it: it waits for most of the opening, then fades up over the
+               * last of it. Closing takes the fade first, so the card collapses
+               * on an empty panel. */
+              className={`px-8 pt-6 pb-8 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none sm:px-10 sm:pt-8 sm:pb-10 ${
+                expanded
+                  ? "translate-y-0 opacity-100 delay-150"
+                  : "-translate-y-1 opacity-0"
+              }`}
+            >
               {status === "sent" ? (
                 <p
                   role="status"
