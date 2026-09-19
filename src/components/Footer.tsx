@@ -1,15 +1,15 @@
 import {
-  BLOG_URL,
+  AUTHOR_URL,
   DONATE_URL,
   LICENSE_URL,
   RELEASES_URL,
   REPO_URL,
 } from "@/lib/site";
 
+/* No write-up link until the post is actually published. */
 const LINKS = [
   { label: "GitHub", href: REPO_URL },
   { label: "Releases", href: RELEASES_URL },
-  { label: "Write-up", href: BLOG_URL },
   { label: "License", href: LICENSE_URL },
 ];
 
@@ -49,10 +49,37 @@ function CoffeeLink() {
 
 export function Footer() {
   return (
-    <footer className="mt-8 border-t border-white/8">
+    <footer className="mt-8">
       <div className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-12 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-md">
-          <p className="text-sm text-muted">MIT, 2026 Kapil Gowru.</p>
+          <p className="text-sm text-muted">
+            MIT, 2026{" "}
+            <a
+              href={AUTHOR_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-baseline gap-0.5 transition hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft"
+            >
+              Kapil Gowru
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 16 16"
+                fill="none"
+                /* Baseline alignment would hang it below the text, so it is
+                 * centred on the line and lifted the last pixel by hand. */
+                className="size-3 -translate-y-px self-center opacity-60"
+              >
+                <path
+                  d="M6 2h8v8M14 2 3 13"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </a>
+            .
+          </p>
           <p className="mt-3 text-sm/6 text-muted">
             Not affiliated with Anthropic.
           </p>
