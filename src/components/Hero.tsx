@@ -3,7 +3,7 @@ import { HERO_CTA_ID } from "./anchors";
 import { GlowField } from "./GlowField";
 import { HeroPreview } from "./HeroPreview";
 import { MetalButton } from "./MetalButton";
-import { BLOG_URL, DOWNLOAD_URL } from "@/lib/site";
+import { DOWNLOAD_URL } from "@/lib/site";
 
 /*
  * Geometry note: the visible squircle is inset ~9.8% inside the 1024px PNG
@@ -113,34 +113,12 @@ export function Hero() {
             proactively teaches you habits to reduce your spend.
           </p>
 
-          {/* Watched by the header, which stays out of the way while these two
-           * are on screen and floats in once they are not. */}
+          {/* Watched by the header, which stays out of the way while the
+           * download button is on screen and floats in once it is not. */}
           <div
             id={HERO_CTA_ID}
             className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center"
           >
-            <a
-              href={BLOG_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/20 px-7 py-3.5 text-base font-medium text-ink transition-colors duration-300 ease-out hover:border-white/35 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-spark-teal-soft sm:w-auto"
-            >
-              Read the write-up
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 16 16"
-                fill="none"
-                className="size-3.5 opacity-60"
-              >
-                <path
-                  d="M6 2h8v8M14 2 3 13"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </a>
             <MetalButton className="w-full sm:w-auto" alwaysOn>
               <a
                 href={DOWNLOAD_URL}

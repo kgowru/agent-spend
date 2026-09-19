@@ -18,7 +18,12 @@ export const RELEASES_URL = `${REPO_URL}/releases/latest`;
  */
 export const DOWNLOAD_URL = `${REPO_URL}/releases/latest/download/AgentSpend.dmg`;
 export const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
+/* Nothing links here yet: the post isn't published. Kept so the hero and footer
+ * links can go back in as they were the day it is. */
 export const BLOG_URL = "https://kapilgowru.xyz/blog/agent-spend";
+
+/** Behind the byline in the footer. */
+export const AUTHOR_URL = "https://kapilgowru.xyz";
 
 /** Buy Me a Coffee link, surfaced as a discreet icon in the footer. */
 export const DONATE_URL = "https://buymeacoffee.com/kapskaps";
