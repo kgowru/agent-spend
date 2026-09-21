@@ -223,10 +223,24 @@ struct Stat: View {
 
 struct Banner: View {
     let text: String
+    /// Supplied when the warning is something you can acknowledge and move on
+    /// from. Without it the banner has no close button and simply stays.
+    var onDismiss: (() -> Void)?
+
     var body: some View {
         HStack(alignment: .top, spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
             Text(text)
+            if let onDismiss {
+                Spacer(minLength: 4)
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.orange)
+                .help("Dismiss")
+                .accessibilityLabel("Dismiss")
+            }
         }
         .font(.caption)
         .foregroundStyle(.orange)
