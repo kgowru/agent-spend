@@ -79,12 +79,26 @@ function Caveat() {
   );
 }
 
+/**
+ * What the figures under the picker are showing, for a screen reader.
+ *
+ * Derived from the scope rather than handed in: the picker changes the whole
+ * pane, so a description written once upstream would describe whichever window
+ * happened to be open when it was written.
+ */
+function describe(scope: Scope): string {
+  if (scope === "1d") {
+    return "Today's spend against a typical day, a chart of when the work happened, and what each project cost.";
+  }
+  const days = Number(scope.replace("d", ""));
+  return `Spend over the last ${days} days beside today's, a bar chart of daily cost split by agent, and a table of cost, energy and requests for each day.`;
+}
+
 export function ScreenToday({
   scope = "14d",
   onScope,
   hovered = null,
   onHover,
-  alt,
 }: {
   scope?: Scope;
   /** Wired up only in the hero, where the whole pane is under the picker. */
@@ -92,12 +106,6 @@ export function ScreenToday({
   /** The column the pointer is on: a day index at 14d and up, an hour at 1d. */
   hovered?: number | null;
   onHover?: (column: number | null) => void;
-  /**
-   * Describes the figures for a screen reader. Passed where the pane carries
-   * its own description because it also carries controls, and anything inside
-   * an `img` is not exposed — the picker would be unreachable.
-   */
-  alt?: string;
 }) {
   const figure =
     scope === "1d" ? (
@@ -113,26 +121,25 @@ export function ScreenToday({
       />
     );
 
+  /* A still, described by whatever frames it. The showcase tile wraps the
+   * whole pane in one `img`, and there is nothing in here to operate. */
+  if (!onScope) return <Screen className="gap-4 p-4">{figure}</Screen>;
+
   return (
     <Screen className="gap-4 p-4">
-      {/* Only where it works. A showcase tile is a still, and a picker that
-       * cannot be pressed is worse than no picker at all. */}
-      {onScope && (
-        <SegmentedControl
-          options={SCOPES}
-          selected={scope}
-          onSelect={onScope}
-          label="Window"
-        />
-      )}
+      <SegmentedControl
+        options={SCOPES}
+        selected={scope}
+        onSelect={onScope}
+        label="Window"
+      />
 
-      {alt ? (
-        <div role="img" aria-label={alt} className="flex flex-col gap-4">
-          {figure}
-        </div>
-      ) : (
-        figure
-      )}
+      {/* The pane describes its own figures because it also carries a control,
+       * and anything inside an `img` is not exposed: wrapping the lot would put
+       * the picker out of reach of a screen reader. */}
+      <div role="img" aria-label={describe(scope)} className="flex flex-col gap-4">
+        {figure}
+      </div>
     </Screen>
   );
 }

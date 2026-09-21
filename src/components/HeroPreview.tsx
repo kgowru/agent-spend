@@ -38,8 +38,8 @@ const CONTENT_H = WINDOW_H - TABS_H - FOOTER_H - 2;
  *
  * Home and Sessions arrive live: in the window they are the whole pane rather
  * than the top of one under a crop, so their own scope pickers work and their
- * charts answer the pointer, the way the app's do. They describe their own
- * figures, which is why neither carries an `alt` here — see Pane.alt.
+ * charts answer the pointer, the way the app's do. Each describes its own
+ * figures, per scope, which is why neither carries an `alt` here. See Pane.alt.
  *
  * Savings has nothing to operate, so it stays a still: rendered here, in a
  * server component, and handed to the client one as a node.
@@ -48,16 +48,12 @@ const PANES: Pane[] = [
   {
     key: "today",
     label: "Home",
-    node: (
-      <ScreenTodayLive alt="A bar chart of daily cost, split by agent, and a table of cost, energy and requests for each day." />
-    ),
+    node: <ScreenTodayLive />,
   },
   {
     key: "sessions",
     label: "Sessions",
-    node: (
-      <ScreenSessionsLive alt="A chart of when today's work happened, then each run with its project, branch, model, request count and cost." />
-    ),
+    node: <ScreenSessionsLive />,
   },
   {
     key: "savings",
