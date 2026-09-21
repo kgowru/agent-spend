@@ -9,8 +9,8 @@ import {
 import { PreviewTabs, type Pane } from "./PreviewTabs";
 import { C, fadeMask, NUM, Rule } from "./screens/chrome";
 import { ScreenSavings } from "./screens/ScreenSavings";
-import { ScreenSessions } from "./screens/ScreenSessions";
-import { ScreenToday } from "./screens/ScreenToday";
+import { ScreenSessionsLive } from "./screens/ScreenSessionsLive";
+import { ScreenTodayLive } from "./screens/ScreenTodayLive";
 
 /*
  * The whole product in one figure: the menu bar item, and the window that
@@ -35,21 +35,29 @@ const CONTENT_H = WINDOW_H - TABS_H - FOOTER_H - 2;
 
 /*
  * The three panes behind the picker, the same recreations the showcase uses.
- * Rendered here, in a server component, and handed to the client one as nodes,
- * so switching tabs costs a state update rather than a bundle.
+ *
+ * Home and Sessions arrive live: in the window they are the whole pane rather
+ * than the top of one under a crop, so their own scope pickers work and their
+ * charts answer the pointer, the way the app's do. They describe their own
+ * figures, which is why neither carries an `alt` here — see Pane.alt.
+ *
+ * Savings has nothing to operate, so it stays a still: rendered here, in a
+ * server component, and handed to the client one as a node.
  */
 const PANES: Pane[] = [
   {
     key: "today",
     label: "Home",
-    node: <ScreenToday />,
-    alt: "The Home pane on its 14 day window: a total of $87, a bar chart of daily cost, and a table of cost, energy and requests for each day.",
+    node: (
+      <ScreenTodayLive alt="A bar chart of daily cost, split by agent, and a table of cost, energy and requests for each day." />
+    ),
   },
   {
     key: "sessions",
     label: "Sessions",
-    node: <ScreenSessions />,
-    alt: "The Sessions pane: a chart of when today's work happened, then each run with its project, branch, model, request count and cost.",
+    node: (
+      <ScreenSessionsLive alt="A chart of when today's work happened, then each run with its project, branch, model, request count and cost." />
+    ),
   },
   {
     key: "savings",

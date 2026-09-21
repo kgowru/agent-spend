@@ -34,7 +34,7 @@ const SHOTS: Shot[] = [
     key: "today",
     screen: <ScreenToday />,
     title: "Daily spend",
-    alt: "The AgentSpend home pane, on its 14 day window: a total of $87, a bar chart of daily cost, and a per day table of cost, energy and request counts.",
+    alt: "The AgentSpend home pane: today's $25 against $267 over the last 14 days, a bar chart of daily cost split by agent, and a per day table of cost, energy and request counts.",
     span: "md:col-span-3",
   },
   {

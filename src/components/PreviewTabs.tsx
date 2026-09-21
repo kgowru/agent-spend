@@ -19,8 +19,15 @@ export type Pane = {
   key: string;
   label: string;
   node: ReactNode;
-  /** What this pane shows, for the single described graphic it becomes. */
-  alt: string;
+  /**
+   * What this pane shows, for the single described graphic it becomes.
+   *
+   * Omitted by the panes that carry controls of their own. Anything inside an
+   * `img` is not exposed, so wrapping one would put its picker out of reach of
+   * a screen reader; those panes describe their own figures instead, around
+   * the controls rather than over them.
+   */
+  alt?: string;
 };
 
 /* The pane is taller than the scroll view, so the crop has to say so. Held
@@ -127,11 +134,12 @@ export function PreviewTabs({
         className="relative overflow-hidden"
         style={{ height: contentHeight, ...CONTENT_FADE }}
       >
-        {/* Announced as one described graphic, and not given a tab stop of its
-         * own: the markup underneath is a wall of demo figures, and the crop
-         * does not scroll, so there is nothing in here to operate. */}
+        {/* Announced as one described graphic where the pane is only a picture:
+         * the markup underneath is a wall of demo figures, and the crop does
+         * not scroll, so there is nothing in there to operate. The panes that
+         * do have something to operate arrive already described — see Pane.alt. */}
         <div
-          role="img"
+          role={panes[active].alt ? "img" : undefined}
           aria-label={panes[active].alt}
           className="absolute inset-x-0 top-0"
         >
