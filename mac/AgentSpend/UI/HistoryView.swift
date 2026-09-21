@@ -6,14 +6,21 @@ import SwiftUI
 struct TodayView: View {
     @ObservedObject var engine: UsageEngine
     @AppStorage("historyDays") private var days = 1
+    /// Which set of unpriced models has been waved off, stored as the same
+    /// sorted, comma-joined string the banner shows. Keying on the names rather
+    /// than a plain bool means a model you have never seen before brings the
+    /// warning back, while the ones you already know about stay quiet.
+    @AppStorage("dismissedUnpricedModels") private var dismissedModels = ""
     @State private var projectsExpanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if !engine.unrecognizedModels.isEmpty {
-                Banner(text: "No price or energy figures yet for "
-                       + engine.unrecognizedModels.sorted().joined(separator: ", ")
-                       + ", so those requests count as zero.")
+        let unpriced = engine.unrecognizedModels.sorted().joined(separator: ", ")
+
+        return VStack(alignment: .leading, spacing: 14) {
+            if !unpriced.isEmpty, unpriced != dismissedModels {
+                Banner(text: "No price or energy figures yet for \(unpriced)"
+                       + ", so those requests count as zero.",
+                       onDismiss: { dismissedModels = unpriced })
             }
 
             // Selector first: the headline below is the total for whichever
