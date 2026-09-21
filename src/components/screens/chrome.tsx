@@ -89,8 +89,8 @@ export function Rule({ className = "" }: { className?: string }) {
 
 /*
  * AppKit's segmented control in dark mode: a sunken track with the selected
- * segment raised out of it. Shared with SegmentedControl, the working version
- * of the same picker, so the drawing and the control cannot drift apart.
+ * segment raised out of it. Kept here with the rest of the app's chrome, and
+ * worn by SegmentedControl, which is the only thing that draws it.
  */
 export const TRACK = {
   className:
@@ -112,33 +112,11 @@ export function segmentStyle(selected: boolean): CSSProperties {
     : { color: C.primary };
 }
 
-/**
- * The scope picker a pane carries above its figures. The app sizes these to
- * their contents and leaves them flush left rather than stretching them across
- * the pane.
- *
- * A depiction, not a control — this is the one the showcase tiles get, where
- * the pane is a picture of the app and there is nothing under the crop to
- * switch to. The hero window renders SegmentedControl instead, which is the
- * same picker wired up.
+/*
+ * There is no drawn version of this picker any more. A pane only carries one
+ * where it works, which is the hero window; the showcase tiles are stills, and
+ * a control that cannot be pressed is worse than no control at all.
  */
-export function Segmented({
-  options,
-  selected,
-}: {
-  options: readonly string[];
-  selected: string;
-}) {
-  return (
-    <div className={TRACK.className} style={TRACK.style}>
-      {options.map((option) => (
-        <div key={option} className={SEGMENT} style={segmentStyle(option === selected)}>
-          {option}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 /** A small caps-ish label, the app's `.caption` in secondary. */
 export function Label({

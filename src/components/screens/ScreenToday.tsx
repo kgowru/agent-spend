@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { C, Headline, Label, NUM, Rule, Screen, Segmented } from "./chrome";
+import { C, Headline, Label, NUM, Rule, Screen } from "./chrome";
 import { AGENTS } from "./agents";
 import { count, homeEnergy, usd, wh } from "./format";
 import { HourlyBars, type Hour } from "./HourlyBars";
@@ -103,20 +103,27 @@ export function ScreenToday({
     scope === "1d" ? (
       <TodaySection hovered={hovered} onHover={onHover} />
     ) : (
-      <PeriodSection days={Number(scope.replace("d", ""))} hovered={hovered} onHover={onHover} />
+      <PeriodSection
+        days={Number(scope.replace("d", ""))}
+        /* Nothing chose this window, so the period is not the answer to
+         * anything: today is the figure, and the fortnight is its context. */
+        leadWithToday={!onScope}
+        hovered={hovered}
+        onHover={onHover}
+      />
     );
 
   return (
     <Screen className="gap-4 p-4">
-      {onScope ? (
+      {/* Only where it works. A showcase tile is a still, and a picker that
+       * cannot be pressed is worse than no picker at all. */}
+      {onScope && (
         <SegmentedControl
           options={SCOPES}
           selected={scope}
           onSelect={onScope}
           label="Window"
         />
-      ) : (
-        <Segmented options={SCOPES} selected={scope} />
       )}
 
       {alt ? (
@@ -240,10 +247,12 @@ function TodaySection({
 
 function PeriodSection({
   days,
+  leadWithToday = false,
   hovered,
   onHover,
 }: {
   days: number;
+  leadWithToday?: boolean;
   hovered: number | null;
   onHover?: (day: number | null) => void;
 }) {
@@ -260,21 +269,47 @@ function PeriodSection({
   return (
     <>
       <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-px">
-          <Label>Last {days} days</Label>
-          <Headline>{usd(periodUsd)}</Headline>
-          <Label>
-            {wh(periodWh)} (Claude Code only) · {count(periodReqs)} requests
-          </Label>
-          <Label tone={C.tertiary}>{homeEnergy(periodWh)}</Label>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-px text-right">
-          <Label>Today</Label>
-          <Headline>{usd(today.usd)}</Headline>
-          <Label tone={ratio > 1.5 ? C.orange : C.tertiary}>
-            {ratio.toFixed(1)}× the {days}d avg
-          </Label>
-        </div>
+        {leadWithToday ? (
+          <>
+            <div className="flex min-w-0 flex-col gap-px">
+              <Label>Today</Label>
+              <Headline>{usd(today.usd)}</Headline>
+              {/* Energy is Anthropic-only, and the app says so rather than
+               * presenting a partial total as the whole. */}
+              <Label>
+                {wh(today.wh)} (Claude Code only) · {count(today.reqs)} requests
+              </Label>
+              <Label tone={C.tertiary}>{homeEnergy(today.wh)}</Label>
+            </div>
+            {/* The window the chart below covers, as context for the figure on
+             * the left. A rate rather than its own energy total: the qualifier
+             * that total would need does not fit a right-aligned column, and a
+             * partial number without it is the thing this app argues against. */}
+            <div className="flex shrink-0 flex-col items-end gap-px text-right">
+              <Label>Last {days} days</Label>
+              <Headline>{usd(periodUsd)}</Headline>
+              <Label tone={C.tertiary}>{usd(avg)} a day</Label>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex min-w-0 flex-col gap-px">
+              <Label>Last {days} days</Label>
+              <Headline>{usd(periodUsd)}</Headline>
+              <Label>
+                {wh(periodWh)} (Claude Code only) · {count(periodReqs)} requests
+              </Label>
+              <Label tone={C.tertiary}>{homeEnergy(periodWh)}</Label>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-px text-right">
+              <Label>Today</Label>
+              <Headline>{usd(today.usd)}</Headline>
+              <Label tone={ratio > 1.5 ? C.orange : C.tertiary}>
+                {ratio.toFixed(1)}× the {days}d avg
+              </Label>
+            </div>
+          </>
+        )}
       </div>
 
       <Caveat />

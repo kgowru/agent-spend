@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { C, Label, NUM, Rule, Screen, Segmented } from "./chrome";
+import { C, Label, NUM, Rule, Screen } from "./chrome";
 import { tokens, usd, wh } from "./format";
 import { HourlyBars, type Hour } from "./HourlyBars";
 import { SegmentedControl } from "./SegmentedControl";
@@ -174,19 +174,20 @@ export function ScreenSessions({
 
   return (
     <Screen className="p-4">
-      {/* Scope, then the shape of the day, then the runs themselves. */}
-      {onScope ? (
-        <SegmentedControl
-          options={SCOPES}
-          selected={scope}
-          onSelect={onScope}
-          label="Window"
-        />
-      ) : (
-        <Segmented options={SCOPES} selected={scope} />
+      {/* Scope, then the shape of the day, then the runs themselves. Only
+       * where the scope works: a showcase tile is a still, and a picker that
+       * cannot be pressed is worse than no picker at all. */}
+      {onScope && (
+        <>
+          <SegmentedControl
+            options={SCOPES}
+            selected={scope}
+            onSelect={onScope}
+            label="Window"
+          />
+          <div className="h-[14px] shrink-0" />
+        </>
       )}
-
-      <div className="h-[14px] shrink-0" />
 
       {alt ? (
         <div role="img" aria-label={alt} className="flex min-w-0 flex-col">
