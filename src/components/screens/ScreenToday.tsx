@@ -1,49 +1,49 @@
+import type { ReactNode } from "react";
 import { C, Headline, Label, NUM, Rule, Screen, Segmented } from "./chrome";
 import { AGENTS } from "./agents";
+import { count, homeEnergy, usd, wh } from "./format";
+import { HourlyBars, type Hour } from "./HourlyBars";
+import {
+  lastDays,
+  TODAY_DAY,
+  TODAY_HOURLY,
+  TODAY_PROJECTS,
+  TODAY_WH_PER_USD,
+  TYPICAL_USD,
+  type Day,
+} from "./history";
+import { SegmentedControl } from "./SegmentedControl";
 
 /*
- * The home pane on its 14 day window: TodayView's `periodSection` plus the
- * `DailyBars` chart (mac/AgentSpend/UI/HistoryView.swift), rebuilt as HTML so
- * the type stays vector instead of being a capture scaled down until it goes
- * soft.
+ * The home pane, rebuilt as HTML from the app's own TodayView
+ * (mac/AgentSpend/UI/HistoryView.swift) so the type stays vector instead of
+ * being a capture scaled down until it goes soft.
+ *
+ * The picker above the figures is the pane, not a filter on it: at 1d the app
+ * draws today against a typical day and shows where the hours went, and at
+ * 14d/30d/90d it draws a period against its own average and shows the days.
+ * Both are here, because in the hero window the picker works.
  *
  * The colours and logo paths are NOT written here. They come from `agents.ts`,
  * which tools/sync-site-agents.py generates out of the app's own
  * AgentPalette.swift and AgentLogos.swift, so the marketing screen cannot drift
- * from what the app draws.
+ * from what the app draws. The figures come from `history.ts`.
  *
- * Every figure is invented but internally consistent: the per agent splits sum
- * to each day's total, the days sum to the $267 headline, the largest is the
- * "peak $41", and the table rows match the last five bars.
+ * Presentational: scope and hover are props, so a showcase tile renders this on
+ * the server as a still and the hero renders it through ScreenTodayLive.
  */
 
-const SCOPES = ["1d", "14d", "30d", "90d"] as const;
-
-/** Per day, per agent, oldest to newest. Index matches AGENTS. */
-const DAILY: number[][] = [
-  [14.2, 3.1, 1.2, 0.0],
-  [26.4, 6.8, 2.4, 1.1],
-  [12.9, 2.2, 0.0, 0.6],
-  [24.1, 7.4, 3.0, 1.3],
-  [1.2, 0.0, 0.4, 0.0],
-  [2.4, 0.6, 0.0, 0.0],
-  [13.8, 4.1, 1.9, 0.8],
-  [10.2, 2.8, 0.0, 0.5],
-  [18.6, 5.2, 2.1, 1.0],
-  [30.4, 7.9, 2.6, 0.0],
-  [15.1, 3.4, 1.1, 0.7],
-  [4.3, 1.1, 0.0, 0.0],
-  [2.1, 0.5, 0.3, 0.0],
-  [17.9, 4.6, 1.8, 0.9],
-];
-
-const DAY_TOTAL = DAILY.map((d) => d.reduce((a, b) => a + b, 0));
-const PEAK = Math.max(...DAY_TOTAL);
+export const SCOPES = ["1d", "14d", "30d", "90d"] as const;
+export type Scope = (typeof SCOPES)[number];
 
 /** Chart height in px. The app draws 54pt of bar; this is that at our scale. */
 const CHART_H = 70;
 /** The app floors a bar at 2pt so a quiet day still reads as a day, not a gap. */
 const MIN_BAR = 2;
+
+const COST_W = "w-[56px] sm:w-[70px]";
+const ENERGY_W = "w-[60px] sm:w-[76px]";
+const REQS_W = "w-[38px] sm:w-[48px]";
 
 /** The agent's mark at legend size: its logo, or its initial where none exists. */
 function Mark({ i, size = 10 }: { i: number; size?: number }) {
@@ -66,105 +66,220 @@ function Mark({ i, size = 10 }: { i: number; size?: number }) {
   );
 }
 
-type Row = { day: string; project: string; cost: string; energy: string; reqs: string };
+/*
+ * What the number actually is. On a flat rate plan it is a list price
+ * equivalent, and the gap is large enough that leaving it unsaid is the biggest
+ * overstatement the app could make.
+ */
+function Caveat() {
+  return (
+    <Label tone={C.tertiary} className="leading-snug">
+      List price, not your bill. You are on Claude Max 5x, which is flat rate.
+    </Label>
+  );
+}
 
-const ROWS: Row[] = [
-  { day: "Today", project: "api-gateway", cost: "$25.20", energy: "1.1 kWh", reqs: "412" },
-  { day: "Yesterday", project: "storefront", cost: "$2.90", energy: "128 Wh", reqs: "47" },
-  { day: "Sat, Sep 12", project: "api-gateway", cost: "$5.40", energy: "241 Wh", reqs: "88" },
-  { day: "Fri, Sep 11", project: "api-gateway", cost: "$20.30", energy: "902 Wh", reqs: "331" },
-  { day: "Thu, Sep 10", project: "storefront", cost: "$40.90", energy: "1.8 kWh", reqs: "664" },
-];
+export function ScreenToday({
+  scope = "14d",
+  onScope,
+  hovered = null,
+  onHover,
+  alt,
+}: {
+  scope?: Scope;
+  /** Wired up only in the hero, where the whole pane is under the picker. */
+  onScope?: (scope: Scope) => void;
+  /** The column the pointer is on: a day index at 14d and up, an hour at 1d. */
+  hovered?: number | null;
+  onHover?: (column: number | null) => void;
+  /**
+   * Describes the figures for a screen reader. Passed where the pane carries
+   * its own description because it also carries controls, and anything inside
+   * an `img` is not exposed — the picker would be unreachable.
+   */
+  alt?: string;
+}) {
+  const figure =
+    scope === "1d" ? (
+      <TodaySection hovered={hovered} onHover={onHover} />
+    ) : (
+      <PeriodSection days={Number(scope.replace("d", ""))} hovered={hovered} onHover={onHover} />
+    );
 
-const COST_W = "w-[56px] sm:w-[70px]";
-const ENERGY_W = "w-[60px] sm:w-[76px]";
-const REQS_W = "w-[38px] sm:w-[48px]";
-
-export function ScreenToday() {
   return (
     <Screen className="gap-4 p-4">
-      {/* 1d is where it opens, every time: the question a glance at the menu
-       * bar asks is "what am I spending right now". */}
-      <Segmented options={SCOPES} selected="14d" />
+      {onScope ? (
+        <SegmentedControl
+          options={SCOPES}
+          selected={scope}
+          onSelect={onScope}
+          label="Window"
+        />
+      ) : (
+        <Segmented options={SCOPES} selected={scope} />
+      )}
 
+      {alt ? (
+        <div role="img" aria-label={alt} className="flex flex-col gap-4">
+          {figure}
+        </div>
+      ) : (
+        figure
+      )}
+    </Screen>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* 1d                                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Today on its own. The comparison is a trailing 30 day average rather than
+ * anything inside the window, because a one day window has no inside.
+ */
+function TodaySection({
+  hovered,
+  onHover,
+}: {
+  hovered: number | null;
+  onHover?: (hour: number | null) => void;
+}) {
+  const today = TODAY_DAY;
+  const ratio = today.usd / TYPICAL_USD;
+
+  // Traffic light against a typical day: green while under, yellow as it runs
+  // over, red once well past.
+  const tone = ratio < 1 ? C.green : ratio < 1.5 ? C.yellow : C.red;
+
+  // Plain language rather than a bare multiplier, which readers have to convert
+  // in their heads. Within a tenth either way reads as normal.
+  const off = Math.round(Math.abs(ratio - 1) * 100);
+  const phrase =
+    Math.abs(ratio - 1) < 0.1
+      ? "About normal"
+      : `${off}% ${ratio < 1 ? "below" : "above"} normal`;
+
+  const hours: Hour[] = TODAY_HOURLY.map((h) => ({
+    usd: h,
+    // Spread at today's own rate, so an hour's readout is on the same footing
+    // as the day's total above it.
+    reqs: Math.round((h / today.usd) * today.reqs),
+  }));
+
+  const shown = TODAY_PROJECTS.slice(0, 3);
+
+  return (
+    <>
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-px">
-          <Label>Last 14 days</Label>
-          <Headline>$267</Headline>
+          <Label>Today</Label>
+          <Headline tone={tone}>{usd(today.usd)}</Headline>
           {/* Energy is Anthropic-only, and the app says so rather than
            * presenting a partial total as the whole. */}
-          <Label>7.8 kWh (Claude Code only) · 2,418 requests</Label>
-          <Label tone={C.tertiary}>≈ 6.4 hours of a typical US home</Label>
+          <Label>
+            {wh(today.wh)} (Claude Code only) · {count(today.reqs)} requests
+          </Label>
+          <Label tone={C.tertiary}>{homeEnergy(today.wh)}</Label>
+        </div>
+        {/* Mirrors the column on the left: label, big number, detail line. */}
+        <div className="flex shrink-0 flex-col items-end gap-px text-right">
+          <Label>Average</Label>
+          <Headline>{usd(TYPICAL_USD)}</Headline>
+          <Label tone={ratio > 1.5 ? C.orange : C.secondary}>{phrase}</Label>
+        </div>
+      </div>
+
+      <Caveat />
+
+      <HourlyBars hours={hours} hovered={hovered} onHover={onHover} />
+
+      <div className="flex flex-col gap-[5px]">
+        <div
+          className="flex items-baseline gap-[10px] text-[11px]"
+          style={{ color: C.secondary }}
+        >
+          <span className="min-w-0 flex-1">project today</span>
+          <span className={`${COST_W} text-right`}>cost</span>
+          <span className={`${ENERGY_W} text-right`}>energy</span>
+        </div>
+
+        <Rule />
+
+        {shown.map((p) => (
+          <div
+            key={p.project}
+            className="flex items-center gap-[10px] text-[12px] leading-[1.35]"
+          >
+            <span className="min-w-0 flex-1 truncate">{p.project}</span>
+            <span className={`${COST_W} text-right`} style={NUM}>
+              {usd(p.usd)}
+            </span>
+            <span
+              className={`${ENERGY_W} text-right`}
+              style={{ ...NUM, color: C.secondary }}
+            >
+              {wh(p.usd * TODAY_WH_PER_USD)}
+            </span>
+          </div>
+        ))}
+
+        {/* A depiction, like Method and Quit in the footer: the pane's job here
+         * is the shape of the day, not its long tail of small projects. */}
+        <Label tone={C.blue} className="pt-[2px]">
+          Show {TODAY_PROJECTS.length - shown.length} more
+        </Label>
+      </div>
+    </>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* 14d / 30d / 90d                                                             */
+/* -------------------------------------------------------------------------- */
+
+function PeriodSection({
+  days,
+  hovered,
+  onHover,
+}: {
+  days: number;
+  hovered: number | null;
+  onHover?: (day: number | null) => void;
+}) {
+  const span = lastDays(days);
+  const today = span[span.length - 1];
+  const active = span.filter((d) => d.reqs > 0);
+
+  const periodUsd = span.reduce((a, d) => a + d.usd, 0);
+  const periodWh = span.reduce((a, d) => a + d.wh, 0);
+  const periodReqs = span.reduce((a, d) => a + d.reqs, 0);
+  const avg = periodUsd / active.length;
+  const ratio = today.usd / avg;
+
+  return (
+    <>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-px">
+          <Label>Last {days} days</Label>
+          <Headline>{usd(periodUsd)}</Headline>
+          <Label>
+            {wh(periodWh)} (Claude Code only) · {count(periodReqs)} requests
+          </Label>
+          <Label tone={C.tertiary}>{homeEnergy(periodWh)}</Label>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-px text-right">
           <Label>Today</Label>
-          <Headline>$25.20</Headline>
-          <Label tone={C.tertiary}>1.3× the 14d avg</Label>
-        </div>
-      </div>
-
-      {/* What the number actually is. On a flat rate plan it is a list price
-       * equivalent, and the gap is large enough that leaving it unsaid is the
-       * biggest overstatement the app could make. */}
-      <Label tone={C.tertiary} className="leading-snug">
-        List price, not your bill. You are on Claude Max 5x, which is flat rate.
-      </Label>
-
-      <div className="flex flex-col gap-1">
-        <div
-          aria-hidden="true"
-          className="flex items-end gap-[3px]"
-          style={{ height: CHART_H }}
-        >
-          {DAILY.map((day, i) => {
-            const total = DAY_TOTAL[i];
-            const h = Math.max(MIN_BAR, (CHART_H * total) / PEAK);
-            return (
-              <div
-                key={i}
-                className="flex flex-1 flex-col justify-end overflow-hidden rounded-t-[2px]"
-                style={{ height: h }}
-              >
-                {/* Top down, so the rounded cap lands on the topmost segment.
-                 * Palette order, never that day's ranking: a stack that
-                 * re-sorted would put a different agent at the same height on
-                 * neighbouring bars, which is the comparison the eye makes. */}
-                {day
-                  .map((usd, a) => ({ usd, a }))
-                  .filter((s) => s.usd > 0)
-                  .reverse()
-                  .map(({ usd, a }) => (
-                    <div
-                      key={a}
-                      style={{
-                        height: `${(usd / total) * 100}%`,
-                        background: AGENTS[a].color,
-                      }}
-                    />
-                  ))}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex items-baseline justify-between">
-          <Label tone={C.tertiary}>Sep 1</Label>
-          <Label tone={C.tertiary} className="tabular-nums">
-            peak $41
+          <Headline>{usd(today.usd)}</Headline>
+          <Label tone={ratio > 1.5 ? C.orange : C.tertiary}>
+            {ratio.toFixed(1)}× the {days}d avg
           </Label>
         </div>
-
-        {/* Identity is never colour alone: the legend is always present, and in
-         * the app hovering a bar swaps it for that day's per agent split. */}
-        <div className="mt-[2px] flex flex-wrap items-center gap-x-3 gap-y-1">
-          {AGENTS.map((a, i) => (
-            <span key={a.key} className="inline-flex items-center gap-[4px]">
-              <Mark i={i} />
-              <Label>{a.label}</Label>
-            </span>
-          ))}
-        </div>
       </div>
+
+      <Caveat />
+
+      <DailyBars span={span} hovered={hovered} onHover={onHover} />
 
       <div className="flex flex-col gap-[5px]">
         <div
@@ -179,35 +294,228 @@ export function ScreenToday() {
 
         <Rule />
 
-        {ROWS.map((row) => (
+        {/* Newest first — the recent days are the ones you act on. */}
+        {[...active].reverse().map((d) => (
           <div
-            key={row.day}
+            key={d.back}
             className="flex items-center gap-[10px] text-[12px] leading-[1.35]"
           >
             <div className="min-w-0 flex-1">
-              <div className="truncate">{row.day}</div>
+              <div className="truncate">{d.label}</div>
               <div className="truncate text-[11px]" style={{ color: C.tertiary }}>
-                {row.project}
+                {d.project}
               </div>
             </div>
             <span className={`${COST_W} text-right`} style={NUM}>
-              {row.cost}
+              {usd(d.usd)}
             </span>
             <span
               className={`${ENERGY_W} text-right`}
               style={{ ...NUM, color: C.secondary }}
             >
-              {row.energy}
+              {wh(d.wh)}
             </span>
             <span
               className={`${REQS_W} text-right`}
               style={{ ...NUM, color: C.secondary }}
             >
-              {row.reqs}
+              {count(d.reqs)}
             </span>
           </div>
         ))}
       </div>
-    </Screen>
+
+      <Rule />
+
+      <div className="flex items-baseline justify-between gap-3">
+        <Label>
+          {active.length} active day{active.length === 1 ? "" : "s"}
+        </Label>
+        <Label className="shrink-0">
+          <span style={NUM}>
+            {usd(avg)} · {wh(periodWh / active.length)}
+          </span>{" "}
+          per active day
+        </Label>
+      </div>
+    </>
   );
+}
+
+/**
+ * Daily cost, stacked by agent.
+ *
+ * Hovering a bar reads out that day above the chart and swaps the legend below
+ * it for that day's per agent split, which is the half of this chart that
+ * actually answers "how much was Gemini". The rest dim so the focus is clear.
+ */
+function DailyBars({
+  span,
+  hovered,
+  onHover,
+}: {
+  span: Day[];
+  hovered: number | null;
+  onHover?: (day: number | null) => void;
+}) {
+  const totals = span.map((d) => d.usd);
+  const peak = Math.max(...totals);
+  const focus = hovered == null ? null : span[hovered];
+  const live = Boolean(onHover);
+
+  /* Narrows on long windows: at 90 days a 3px gap spends more of the pane on
+   * whitespace than on bars. */
+  const gap = span.length > 45 ? 1 : span.length > 20 ? 2 : 3;
+
+  /* Agents anywhere in the window, in palette order. Driven by the window
+   * rather than the hovered day, so the legend does not reflow under the
+   * pointer. */
+  const present = AGENTS.map((_, i) => i).filter((i) =>
+    span.some((d) => d.slices[i] > 0),
+  );
+
+  return (
+    <div className="flex flex-col gap-1">
+      {/* Reserves its own height, so the chart does not jump when the pointer
+       * arrives, and is deliberately blank when it has not. Only where there is
+       * a pointer to arrive: on a showcase tile it is 14px of nothing, pushing
+       * the chart down into the crop it is meant to sit above. */}
+      {live && (
+        <div className="h-[14px] truncate text-[11px] leading-[14px]" style={NUM}>
+          {focus ? (
+            <>
+              {focus.label}
+              <span style={{ color: C.secondary }}>
+                {"  "}
+                {usd(focus.usd)} · {wh(focus.wh)} · {count(focus.reqs)} req
+              </span>
+            </>
+          ) : (
+            " "
+          )}
+        </div>
+      )}
+
+      <div
+        aria-hidden="true"
+        className="flex items-end"
+        style={{ height: CHART_H, gap }}
+      >
+        {span.map((day, i) => {
+          const total = totals[i];
+          const dimmed = hovered != null && hovered !== i;
+          return (
+            /* A full-height slot rather than the bar itself, so the thin bars
+             * and the gaps between them are all easy to land on. */
+            <div
+              key={day.back}
+              className="flex h-full flex-1 flex-col justify-end"
+              title={live ? tooltip(day) : undefined}
+              onPointerEnter={onHover && (() => onHover(i))}
+              onPointerLeave={onHover && (() => onHover(null))}
+            >
+              {total === 0 ? (
+                // The app draws an untouched day as a dimmed floor rather than
+                // a gap, so the window reads as continuous.
+                <div
+                  className="rounded-[1px]"
+                  style={{ height: MIN_BAR, background: C.secondary, opacity: 0.12 }}
+                />
+              ) : (
+                <div
+                  className="flex flex-col justify-end overflow-hidden rounded-t-[2px]"
+                  style={{
+                    height: Math.max(MIN_BAR, (CHART_H * total) / peak),
+                    opacity: dimmed ? 0.3 : 1,
+                    transition: "opacity 120ms",
+                  }}
+                >
+                  {/* Top down, so the rounded cap lands on the topmost segment.
+                   * Palette order, never that day's ranking: a stack that
+                   * re-sorted would put a different agent at the same height on
+                   * neighbouring bars, which is the comparison the eye makes. */}
+                  {day.slices
+                    .map((value, a) => ({ value, a }))
+                    .filter((s) => s.value > 0)
+                    .reverse()
+                    .map(({ value, a }) => (
+                      <div
+                        key={a}
+                        style={{
+                          height: `${(value / total) * 100}%`,
+                          background: AGENTS[a].color,
+                        }}
+                      />
+                    ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Today's marker. A dot rather than a colour, because every colour in
+       * this chart is spoken for by an agent. */}
+      <div aria-hidden="true" className="flex" style={{ gap, height: 3 }}>
+        {span.map((day) => (
+          <div key={day.back} className="flex flex-1 justify-center">
+            {day.back === 0 && (
+              <span
+                className="block size-[3px] rounded-full"
+                style={{ background: C.secondary }}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-baseline justify-between">
+        <Label tone={C.tertiary}>{span[0].short}</Label>
+        <Label tone={C.tertiary} className="tabular-nums">
+          peak {usd(peak)}
+        </Label>
+      </div>
+
+      {/* Identity is never colour alone: the legend is always present, and
+       * hovering a bar swaps it for that day's per agent split. Same slot
+       * either way, so the chart never grows or shrinks under the pointer. */}
+      <div className="mt-[2px] flex h-[14px] items-center gap-x-3 overflow-hidden">
+        {focus
+          ? focus.slices
+              .map((value, i) => ({ value, i }))
+              .filter((s) => s.value > 0)
+              .map(({ value, i }) => (
+                <Entry key={i} i={i}>
+                  <Label>{AGENTS[i].label}</Label>
+                  <span className="text-[11px]" style={NUM}>
+                    {usd(value)}
+                  </span>
+                </Entry>
+              ))
+          : present.map((i) => (
+              <Entry key={i} i={i}>
+                <Label>{AGENTS[i].label}</Label>
+              </Entry>
+            ))}
+      </div>
+    </div>
+  );
+}
+
+function Entry({ i, children }: { i: number; children: ReactNode }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-[4px] whitespace-nowrap">
+      <Mark i={i} />
+      {children}
+    </span>
+  );
+}
+
+function tooltip(day: Day): string {
+  const head = `${day.label}: ${usd(day.usd)} · ${wh(day.wh)}`;
+  const split = day.slices
+    .map((value, i) => ({ value, i }))
+    .filter((s) => s.value > 0)
+    .map(({ value, i }) => `  ${AGENTS[i].label}  ${usd(value)}`);
+  return split.length ? `${head}\n${split.join("\n")}` : head;
 }
