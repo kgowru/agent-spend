@@ -14,13 +14,14 @@ import { ScreenToday, type Scope } from "./ScreenToday";
  * window — day 3 of a fortnight, hour 3 of a day — so carrying it across would
  * light up a bar the pointer is nowhere near.
  */
-export function ScreenTodayLive({ alt }: { alt: string }) {
-  const [scope, setScope] = useState<Scope>("14d");
+export function ScreenTodayLive() {
+  /* 1d is where the app opens, every time: the question a glance at the menu
+   * bar asks is what you are spending right now. */
+  const [scope, setScope] = useState<Scope>("1d");
   const [hovered, setHovered] = useState<number | null>(null);
 
   return (
     <ScreenToday
-      alt={alt}
       scope={scope}
       onScope={(next) => {
         setScope(next);

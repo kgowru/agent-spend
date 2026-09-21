@@ -8,13 +8,12 @@ import { ScreenSessions, type Scope } from "./ScreenSessions";
  * window. State lives here so the pane itself stays a plain function of its
  * props — see ScreenTodayLive, which does the same for Home.
  */
-export function ScreenSessionsLive({ alt }: { alt: string }) {
+export function ScreenSessionsLive() {
   const [scope, setScope] = useState<Scope>("Today");
   const [hovered, setHovered] = useState<number | null>(null);
 
   return (
     <ScreenSessions
-      alt={alt}
       scope={scope}
       onScope={(next) => {
         setScope(next);

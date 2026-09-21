@@ -90,12 +90,24 @@ function hoursToday(sessions: Session[]): Hour[] {
   return hours;
 }
 
+/**
+ * What the figures under the picker are showing, for a screen reader.
+ *
+ * Derived from the scope rather than handed in: only Today draws the hourly
+ * chart, so a description written once upstream would promise a chart the
+ * wider windows do not have.
+ */
+function describe(scope: Scope): string {
+  return scope === "Today"
+    ? "A chart of when today's work happened, then each run with its project, branch, model, request count and cost."
+    : `Every run of the last ${SCOPE_DAYS[scope]} days, with its project, branch, model, request count and cost.`;
+}
+
 export function ScreenSessions({
   scope = "Today",
   onScope,
   hovered = null,
   onHover,
-  alt,
 }: {
   scope?: Scope;
   /** Wired up only in the hero, where the whole pane is under the picker. */
@@ -103,12 +115,6 @@ export function ScreenSessions({
   /** The hour the pointer is on, 0–23. */
   hovered?: number | null;
   onHover?: (hour: number | null) => void;
-  /**
-   * Describes the figures for a screen reader. Passed where the pane carries
-   * its own description because it also carries controls, and anything inside
-   * an `img` is not exposed — the picker would be unreachable.
-   */
-  alt?: string;
 }) {
   const sessions = SESSIONS.filter((s) => s.back < SCOPE_DAYS[scope]).slice(0, LIMIT);
 
@@ -172,30 +178,27 @@ export function ScreenSessions({
     </>
   );
 
+  /* A still, described by whatever frames it. The showcase tile wraps the
+   * whole pane in one `img`, and there is nothing in here to operate. */
+  if (!onScope) return <Screen className="p-4">{figure}</Screen>;
+
   return (
     <Screen className="p-4">
-      {/* Scope, then the shape of the day, then the runs themselves. Only
-       * where the scope works: a showcase tile is a still, and a picker that
-       * cannot be pressed is worse than no picker at all. */}
-      {onScope && (
-        <>
-          <SegmentedControl
-            options={SCOPES}
-            selected={scope}
-            onSelect={onScope}
-            label="Window"
-          />
-          <div className="h-[14px] shrink-0" />
-        </>
-      )}
+      {/* Scope, then the shape of the day, then the runs themselves. */}
+      <SegmentedControl
+        options={SCOPES}
+        selected={scope}
+        onSelect={onScope}
+        label="Window"
+      />
+      <div className="h-[14px] shrink-0" />
 
-      {alt ? (
-        <div role="img" aria-label={alt} className="flex min-w-0 flex-col">
-          {figure}
-        </div>
-      ) : (
-        figure
-      )}
+      {/* The pane describes its own figures because it also carries a control,
+       * and anything inside an `img` is not exposed: wrapping the lot would put
+       * the picker out of reach of a screen reader. */}
+      <div role="img" aria-label={describe(scope)} className="flex min-w-0 flex-col">
+        {figure}
+      </div>
     </Screen>
   );
 }

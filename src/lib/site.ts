@@ -43,7 +43,7 @@ export const VERSION = "v0.1.3";
 
 /** Feeds the meta and OG description, so it has to stay under ~155 characters. */
 export const TAGLINE =
-  "See what your coding agents cost, split by agent, plus an estimate of the energy behind it, and learn habits that reduce your spend.";
+  "See what your coding agents cost in $ and kWh. Get habits to reduce spend.";
 
 export const TRUST = [
   {
