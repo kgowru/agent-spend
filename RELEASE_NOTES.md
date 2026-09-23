@@ -1,41 +1,18 @@
-## AgentSpend v0.1.3
+## AgentSpend v0.1.4
 
-An honesty pass. Three numbers were saying more than they could support, and
-this release makes each of them say what it actually knows.
+A small one. The warning about models with no figures yet can now be closed.
 
-### The headline is not your bill, and now it says so
+### The unpriced model warning has a close button
 
-If you are on a flat rate plan, the dollar figure is what the same tokens would
-cost at API rates. It is not money you were charged, and the gap is large: a
-fortnight reading $2,272 costs about $50 on Claude Max 5x.
+When AgentSpend meets a model it has no price or energy coefficients for, it
+says so at the top of the window and counts those requests as zero. That is
+worth saying once. It was not worth saying on every launch for the weeks a new
+model spends waiting on the next release, with no way to acknowledge it.
 
-AgentSpend now reads your plan from the config Claude Code already writes, and
-labels the figure accordingly:
-
-> List price, not your bill. You are on Claude Max 5x, which is flat rate.
-
-Four keys are read from `~/.claude.json`, none is stored, logged, or sent
-anywhere. If you are billed per token, nothing changes and no caveat appears,
-because then the number really is your spend.
-
-### Energy is no longer shown for non-Anthropic models
-
-It used to show watt-hours for Codex models. It should not have. Those figures
-came from a tier inferred from price, and price does not track compute across
-vendors: `gpt-5-codex` lists below Claude Opus 4.5 despite being a flagship, and
-DeepSeek measures around eight times GPT-4o per query while listing about ten
-times cheaper. The sign is wrong, not just the size.
-
-So energy for those models is withheld rather than guessed, and any total that
-covers a mix now says "Claude Code only" instead of quietly presenting a part as
-the whole. Cost for those models is unaffected and still exact.
-
-### The README was wrong about the download
-
-It claimed a "~1 MB universal binary". The binary has not been that size for a
-while, and since v0.1.2 the download also carries a copy of ccusage. That claim
-is gone, along with several other lines that still described a Claude Code only
-app.
+So the banner now has an X. What closing it remembers is the exact set of model
+names the warning was about, rather than just that a banner was closed once, so
+a model you have not seen before brings it back while the ones you already know
+about stay quiet.
 
 ### Install
 
@@ -44,7 +21,7 @@ Applications. Signed with an Apple Developer ID and notarized by Apple, so it
 opens with no Gatekeeper warning. Universal binary, Apple Silicon and Intel,
 about 7 MB.
 
-Upgrading from v0.1.2: replace the copy in Applications. Nothing to migrate.
+Upgrading from v0.1.3: replace the copy in Applications. Nothing to migrate.
 
 ### How much to trust these numbers
 

@@ -39,7 +39,7 @@ export const SITE_URL =
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : "http://localhost:3000");
 
-export const VERSION = "v0.1.3";
+export const VERSION = "v0.1.4";
 
 /** Feeds the meta and OG description, so it has to stay under ~155 characters. */
 export const TAGLINE =
