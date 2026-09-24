@@ -165,10 +165,21 @@ def energy_wh(row, energy, tiers, bound="v", read_factor=None):
             + row["output"] * e_out) / 1000.0
 
 
-def cost_usd(row, prices, mult):
+def cost_usd(row, prices, cache_multipliers):
     p = prices.get(row["model"])
     if p is None:
         return None
+    mult = p.get("cache") or cache_multipliers.get(p["provider"])
+    if mult is None:
+        return None
+    prompt_tokens = row["input"] + row["cacheWrite"] + row["cacheRead"]
+    long_context = p.get("longContext")
+    if long_context and prompt_tokens > long_context["threshold"]:
+        input_scale = long_context["input"]
+        cache_scale = long_context["cache"]
+        output_scale = long_context["output"]
+    else:
+        input_scale = cache_scale = output_scale = 1.0
     # Split the write by TTL when the breakdown is present; the 1h premium is
     # 2x vs 1.25x, which is a real difference in Claude Code's usage pattern.
     w5, w1h = row["cacheWrite5m"], row["cacheWrite1h"]
@@ -176,10 +187,10 @@ def cost_usd(row, prices, mult):
         write = row["cacheWrite"] * mult["write5m"]
     else:
         write = w5 * mult["write5m"] + w1h * mult["write1h"]
-    return (row["input"] * p["input"]
-            + write * p["input"]
-            + row["cacheRead"] * p["input"] * mult["read"]
-            + row["output"] * p["output"]) / 1_000_000.0
+    return (row["input"] * p["input"] * input_scale
+            + write * p["input"] * cache_scale
+            + row["cacheRead"] * p["input"] * mult["read"] * cache_scale
+            + row["output"] * p["output"] * output_scale) / 1_000_000.0
 
 
 def main():
