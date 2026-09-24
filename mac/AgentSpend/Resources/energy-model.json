@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-09-13",
+  "generated": "2026-09-24",
   "unit": "watt_hours_per_1000_tokens",
   "boundary": "full-datacenter",
   "boundaryNote": "Includes accelerator, host CPU/DRAM, network/storage, and facility PUE. GPU-only accounting would be ~2.4x lower \u2014 Google's own comparison of the two boundaries.",
@@ -213,6 +213,13 @@
       "tier": "frontier-small",
       "basis": "tier-proxy",
       "confidence": "low"
+    },
+    {
+      "id": "gpt-6-astra",
+      "tier": "frontier-large",
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.6-sol",

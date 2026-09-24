@@ -188,6 +188,10 @@ struct SelfTest {
         let est = Estimator(energy: energy, pricing: pricing)
         eq(est.hasCoefficients(for: "gpt-5.6-sol"), true,
            "energy: a withheld-energy model is still priceable")
+        eq(est.hasCoefficients(for: "gpt-6-astra"), true,
+           "energy: gpt-6 Astra is priceable")
+        eq(est.hasEnergyBasis(for: "gpt-6-astra"), false,
+           "energy: gpt-6 Astra has no energy basis")
         eq(est.hasEnergyBasis(for: "gpt-5.6-sol"), false,
            "energy: gpt has no energy basis")
         eq(est.hasEnergyBasis(for: "claude-opus-5"), true,
@@ -456,6 +460,19 @@ struct SelfTest {
         read.cacheWrite = 0
         read.cacheRead = 1_000_000
         close(est.cost(read) ?? -1, 0.4, 1e-9, "gpt-5.6 cache read bills at 0.1x input")
+
+        // GPT-6 Astra charges standard rates through 272K prompt tokens, then
+        // applies 2x input/cache and 1.5x output to the entire request.
+        var astra = UsageRecord(id: "astra", provider: .codex, timestamp: nil,
+                                model: "gpt-6-astra", input: 72_000, output: 10_000,
+                                cacheWrite: 100_000, cacheWrite5m: 0, cacheWrite1h: 0,
+                                cacheRead: 100_000, cwd: nil, gitBranch: nil,
+                                sessionId: nil, isSidechain: false, isSubagent: false)
+        close(est.cost(astra) ?? -1, 2.57, 1e-9,
+              "gpt-6 Astra uses standard rates at the 272K boundary")
+        astra.input += 1
+        close(est.cost(astra) ?? -1, 4.89002, 1e-9,
+              "gpt-6 Astra applies the long-context surcharge to the full request")
 
         // An Anthropic record must still use Anthropic's terms.
         let claude = UsageRecord(id: "c", provider: .claude, timestamp: nil,

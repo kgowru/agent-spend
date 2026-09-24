@@ -1,10 +1,11 @@
 {
-  "schemaVersion": 3,
-  "generated": "2026-09-17",
+  "schemaVersion": 4,
+  "generated": "2026-09-24",
   "currency": "USD",
   "unit": "per_million_tokens",
   "notes": [
     "Anthropic rates verified against the published pricing table on 2026-09-17.",
+    "GPT-6 Astra standard rates verified against OpenAI's published model page on 2026-09-24. Prompts over 272K input tokens are charged at 2x input/cache and 1.5x output for the full request.",
     "cacheMultipliers is keyed by provider: Anthropic charges a premium to WRITE the cache (1.25x for the 5-minute TTL, 2x for the hour) and reads at 0.1x. A model may override its vendor's terms via its own `cache` block, because neither vendor is internally uniform.",
     "Fable 5.1 and Mythos 5.1 read cache at 0.025x ($0.25/MTok), not 0.1x. Cache reads are ~95% of local token volume, so applying the vendor default to them is a 4x overcharge on almost the whole bill.",
     "Sonnet 5 is $2/$10. The increase to $3/$15 scheduled for 2026-09-01 was cancelled and the launch price made permanent."
@@ -141,6 +142,26 @@
       "confidence": "high"
     },
     {
+      "id": "gpt-6-astra",
+      "provider": "codex",
+      "input": 10.0,
+      "output": 50.0,
+      "tier": "frontier-large",
+      "confidence": "high",
+      "cache": {
+        "read": 0.1,
+        "write5m": 1.25,
+        "write1h": 1.25
+      },
+      "longContext": {
+        "threshold": 272000,
+        "input": 2.0,
+        "cache": 2.0,
+        "output": 1.5
+      },
+      "why": "Standard pricing is $10 input, $1 cached input, $12.50 cache write, and $50 output per million tokens."
+    },
+    {
       "id": "gpt-5.6-sol",
       "provider": "codex",
       "input": 4.0,
@@ -257,5 +278,9 @@
     "note": "Models observed in local logs but absent from the published catalog. Priced at their apparent tier and flagged in the UI rather than silently guessed. Currently empty: claude-opus-5, the only occupant, turned out to be published at exactly the price that had been assumed for it.",
     "entries": []
   },
-  "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+  "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+  "sources": [
+    "https://platform.claude.com/docs/en/about-claude/pricing",
+    "https://developers.openai.com/api/docs/models/gpt-6-astra"
+  ]
 }

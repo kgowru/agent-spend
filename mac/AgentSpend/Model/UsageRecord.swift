@@ -158,6 +158,11 @@ struct Estimator: Sendable {
     func cost(_ r: UsageRecord) -> Double? {
         guard let p = prices[r.model],
               let m = p.cache ?? pricing.cacheMultipliers(for: p.provider) else { return nil }
+        let promptTokens = r.input + r.cacheWrite + r.cacheRead
+        let long = p.longContext.flatMap { promptTokens > $0.threshold ? $0 : nil }
+        let inputScale = long?.input ?? 1.0
+        let cacheScale = long?.cache ?? 1.0
+        let outputScale = long?.output ?? 1.0
         // Split the write by TTL when the breakdown is present: the 1h premium
         // is 2x vs the 5m 1.25x, and Claude Code leans on 1h caching.
         let write: Double
@@ -166,10 +171,10 @@ struct Estimator: Sendable {
         } else {
             write = Double(r.cacheWrite5m) * m.write5m + Double(r.cacheWrite1h) * m.write1h
         }
-        return (Double(r.input) * p.input
-                + write * p.input
-                + Double(r.cacheRead) * p.input * m.read
-                + Double(r.output) * p.output) / 1_000_000.0
+        return (Double(r.input) * p.input * inputScale
+                + write * p.input * cacheScale
+                + Double(r.cacheRead) * p.input * m.read * cacheScale
+                + Double(r.output) * p.output * outputScale) / 1_000_000.0
     }
 
     /// Replay the same token counts under a different model.

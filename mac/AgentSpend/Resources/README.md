@@ -8,8 +8,9 @@ both at once.
 - **`energy-model.json`**: per-tier Wh/1k-token coefficients with `lo`/`v`/`hi`
   bands, plus the cache read/write factors, caveats, equivalences, and grid
   defaults. Every number carries a basis, a confidence, and source URLs.
-- **`pricing.json`**: published Anthropic per-MTok rates and cache multipliers.
-  Unlike the energy figures, these are exact.
+- **`pricing.json`**: published per-MTok rates, cache multipliers, and optional
+  per-model long-context thresholds. Unlike the energy figures, these are
+  exact.
 
 Two rules when editing:
 

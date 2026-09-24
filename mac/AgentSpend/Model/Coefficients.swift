@@ -89,6 +89,16 @@ struct PricingModel: Decodable, Sendable {
         let write1h: Double
     }
 
+    /// Multipliers applied when a request crosses a model-specific prompt
+    /// length threshold. OpenAI applies GPT-6 Astra's surcharge to the whole
+    /// request, not just the tokens above the threshold.
+    struct LongContextPricing: Decodable, Sendable {
+        let threshold: Int
+        let input: Double
+        let cache: Double
+        let output: Double
+    }
+
     struct Price: Decodable, Sendable {
         let id: String
         let provider: Provider
@@ -102,6 +112,7 @@ struct PricingModel: Decodable, Sendable {
         /// writes at GPT-5.6 having charged nothing at 5.5, so the terms are a
         /// property of the model, not just the vendor.
         var cache: CacheMultipliers?
+        var longContext: LongContextPricing?
     }
 
     struct UnknownModels: Decodable, Sendable {
