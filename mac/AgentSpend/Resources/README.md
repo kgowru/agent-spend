@@ -8,13 +8,15 @@ both at once.
 - **`energy-model.json`**: per-tier Wh/1k-token coefficients with `lo`/`v`/`hi`
   bands, plus the cache read/write factors, caveats, equivalences, and grid
   defaults. Every number carries a basis, a confidence, and source URLs.
-- **`pricing.json`**: published Anthropic and OpenAI per-MTok rates and cache
-  multipliers. Unlike the energy figures, these are exact. `cacheMultipliers`
-  holds the per-vendor default and a model's own `cache` block overrides it,
-  because neither vendor is internally uniform — Fable 5.1 and Mythos 5.1 read
-  at 0.025x and Opus 5.5 at 0.05x against Anthropic's 0.1x house rate, and
-  OpenAI began charging for cache writes at GPT-5.6 having charged nothing at
-  5.5.
+- **`pricing.json`**: published Anthropic and OpenAI per-MTok rates, cache
+  multipliers, and optional per-model long-context thresholds. Unlike the
+  energy figures, these are exact. `cacheMultipliers` holds the per-vendor
+  default and a model's own `cache` block overrides it, because neither vendor
+  is internally uniform — Fable 5.1 and Mythos 5.1 read at 0.025x and Opus 5.5
+  at 0.05x against Anthropic's 0.1x house rate, and OpenAI began charging for
+  cache writes at GPT-5.6 having charged nothing at 5.5. A `longContext` block
+  carries the surcharge OpenAI applies to a whole request once it crosses that
+  model's prompt threshold; only gpt-6-astra has one so far.
 
 Three rules when editing:
 

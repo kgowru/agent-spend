@@ -124,17 +124,36 @@ def main():
     p = prices[row["model"]]
     # A model's own `cache` block wins over its vendor default, and
     # `cacheMultipliers` is keyed by provider — so neither the hand
-    # computation nor cost_usd may index it directly.
+    # computation nor cost_usd may index it directly. A `longContext` block
+    # rescales the whole request once the prompt crosses its threshold.
     model_mult = p.get("cache") or mult[p["provider"]]
     w5, w1h = row["cacheWrite5m"], row["cacheWrite1h"]
     write = (w5 * model_mult["write5m"] + w1h * model_mult["write1h"]) \
         if (w5 + w1h) else row["cacheWrite"] * model_mult["write5m"]
-    hand = (row["input"] * p["input"] + write * p["input"]
-            + row["cacheRead"] * p["input"] * model_mult["read"]
-            + row["output"] * p["output"]) / 1_000_000.0
+    prompt_tokens = row["input"] + row["cacheWrite"] + row["cacheRead"]
+    long_context = p.get("longContext")
+    is_long = long_context and prompt_tokens > long_context["threshold"]
+    input_scale = long_context["input"] if is_long else 1.0
+    cache_scale = long_context["cache"] if is_long else 1.0
+    output_scale = long_context["output"] if is_long else 1.0
+    hand = (row["input"] * p["input"] * input_scale
+            + write * p["input"] * cache_scale
+            + row["cacheRead"] * p["input"] * model_mult["read"] * cache_scale
+            + row["output"] * p["output"] * output_scale) / 1_000_000.0
     got = cost_usd(row, prices, mult)
     check("hand-computed cost matches cost_usd", abs(hand - got) < 1e-12,
           f"{row['model']}: ${got:.6f}")
+
+    astra = {
+        "model": "gpt-6-astra", "input": 72_000, "output": 10_000,
+        "cacheWrite": 100_000, "cacheWrite5m": 0, "cacheWrite1h": 0,
+        "cacheRead": 100_000,
+    }
+    check("gpt-6 Astra uses standard rates at the 272K boundary",
+          abs(cost_usd(astra, prices, mult) - 2.57) < 1e-12)
+    astra["input"] += 1
+    check("gpt-6 Astra applies the surcharge to the full request",
+          abs(cost_usd(astra, prices, mult) - 4.89002) < 1e-12)
 
     print("\n6. Model ID normalization")
     check("dated IDs normalize to alias",
