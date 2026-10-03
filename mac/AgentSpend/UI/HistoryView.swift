@@ -18,8 +18,7 @@ struct TodayView: View {
 
         return VStack(alignment: .leading, spacing: 14) {
             if !unpriced.isEmpty, unpriced != dismissedModels {
-                Banner(text: "No price or energy figures yet for \(unpriced)"
-                       + ", so those requests count as zero.",
+                Banner(text: "No price or energy figures yet for \(unpriced).",
                        onDismiss: { dismissedModels = unpriced })
             }
 

@@ -181,7 +181,14 @@ struct HourlyBars: View {
     private func bar(_ h: (hour: Int, requests: Int, usd: Double, slices: [AgentSlice]),
                      maxV: Double) -> some View {
         let height = maxV == 0 ? 2 : max(2, 34 * h.usd / maxV)
-        if h.slices.isEmpty {
+        if maxV == 0 {
+            // Nothing to plot — every hour is zero, which the 2pt baseline below
+            // renders as a blank strip that reads as a broken chart rather than
+            // an empty one. A stencil of the bars keeps the shape legible, and
+            // is flat and uniform so it cannot be mistaken for data.
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(Color.secondary).opacity(0.1).frame(height: 10)
+        } else if h.slices.isEmpty {
             RoundedRectangle(cornerRadius: 1)
                 .fill(Color.secondary).opacity(0.12).frame(height: 2)
         } else {

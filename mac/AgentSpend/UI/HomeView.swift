@@ -52,7 +52,7 @@ struct LiveSavings: View {
                 Text(recs.isEmpty ? "Today" : "Worth a look today")
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button("all savings ›") { showSavings() }
+                Button("All savings ›") { showSavings() }
                     .buttonStyle(.plain)
                     .font(.caption2)
                     .foregroundStyle(.tint)
@@ -61,8 +61,14 @@ struct LiveSavings: View {
             if recs.isEmpty {
                 // A quiet day is a real answer. Inventing advice from a handful
                 // of requests would make the strip noise you learn to skip.
-                Text("Nothing worth flagging in today's usage.")
-                    .font(.caption).foregroundStyle(.secondary)
+                // The glyph gives the row the same weight as a recommendation
+                // card, so an empty strip reads as a state rather than a gap.
+                HStack(spacing: 6) {
+                    Image(systemName: "tray")
+                        .imageScale(.small).foregroundStyle(.tertiary)
+                    Text("Nothing worth flagging in today's usage.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             } else {
                 ForEach(recs) { LiveSavingsRow(rec: $0) }
             }
