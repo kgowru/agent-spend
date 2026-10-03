@@ -101,18 +101,6 @@ struct TodayView: View {
             }
         }
 
-
-            // What the number actually is. On a flat-rate plan this figure is a
-            // list-price equivalent, not money charged, and the gap is large:
-            // a fortnight reading $2,272 costs about $50 on Claude Max 5x.
-            // Leaving it unqualified is the single biggest overstatement in the
-            // app, so it is said plainly rather than buried in the Method pane.
-            if let caveat = engine.billing.caveat {
-                Text(caveat)
-                    .font(.caption2).foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
         if today?.requests ?? 0 == 0 {
             Text("No activity yet today.")
                 .font(.caption).foregroundStyle(.secondary)
@@ -196,18 +184,6 @@ struct TodayView: View {
                 }
             }
         }
-
-
-            // What the number actually is. On a flat-rate plan this figure is a
-            // list-price equivalent, not money charged, and the gap is large:
-            // a fortnight reading $2,272 costs about $50 on Claude Max 5x.
-            // Leaving it unqualified is the single biggest overstatement in the
-            // app, so it is said plainly rather than buried in the Method pane.
-            if let caveat = engine.billing.caveat {
-                Text(caveat)
-                    .font(.caption2).foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
 
                 DailyBars(summaries: summaries)
 

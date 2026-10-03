@@ -149,41 +149,13 @@ struct SelfTest {
     }
 
 
-    // MARK: - Billing and withheld energy
+    // MARK: - Withheld energy
 
-    /// Both of these are label bugs rather than arithmetic bugs, which is why
-    /// they survived so long: nothing throws, the numbers are all "right", and
-    /// only the sentence around them is wrong.
-    private mutating func billingAndEnergy(_ energy: EnergyModel,
-                                           _ pricing: PricingModel) throws {
-        try freshTmp()
-        func write(_ json: String) throws -> URL {
-            let u = tmp.appending(path: "claude-\(UUID().uuidString).json")
-            try json.write(to: u, atomically: true, encoding: .utf8)
-            return u
-        }
-
-        let max5x = try write(#"{"oauthAccount":{"userRateLimitTier":"default_claude_max_5x","billingType":"stripe_subscription","hasExtraUsageEnabled":true}}"#)
-        let b1 = Billing.detect(configPath: max5x)
-        eq(b1.isSubscription, true, "billing: max 5x is a subscription")
-        eq(b1.caveat?.contains("Claude Max 5x"), true, "billing: names the plan")
-        eq(b1.caveat?.contains("not your bill"), true, "billing: says it is not a bill")
-
-        let pro = try write(#"{"oauthAccount":{"userRateLimitTier":"default_claude_pro","hasExtraUsageEnabled":false}}"#)
-        eq(Billing.detect(configPath: pro).caveat?.contains("flat rate"), true,
-           "billing: pro without overage reads as flat rate")
-
-        // An unknown tier on a subscription must still say "not a bill". The
-        // failure that matters is falling through to silence, which reads as
-        // "this is money you were charged".
-        let future = try write(#"{"oauthAccount":{"userRateLimitTier":"default_claude_max_50x_ultra","billingType":"stripe_subscription"}}"#)
-        eq(Billing.detect(configPath: future).isSubscription, true,
-           "billing: an unrecognised subscription tier is still a subscription")
-
-        let missing = tmp.appending(path: "nope.json")
-        eq(Billing.detect(configPath: missing).caveat, nil,
-           "billing: no config means no claim either way")
-
+    /// A label bug rather than an arithmetic bug, which is why it survived so
+    /// long: nothing throws, the numbers are all "right", and only the sentence
+    /// around them is wrong.
+    private mutating func withheldEnergy(_ energy: EnergyModel,
+                                         _ pricing: PricingModel) throws {
         // Withheld energy must not be confused with an unpriceable model.
         let est = Estimator(energy: energy, pricing: pricing)
         eq(est.hasCoefficients(for: "gpt-5.6-sol"), true,
@@ -215,7 +187,7 @@ struct SelfTest {
             try codex()
             try codexPricing(pricing)
             try sidecar()
-            try billingAndEnergy(energy, pricing)
+            try withheldEnergy(energy, pricing)
         } catch {
             failures.append("threw: \(error)")
         }

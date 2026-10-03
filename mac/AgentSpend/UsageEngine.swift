@@ -23,12 +23,6 @@ final class UsageEngine: ObservableObject {
     /// app exists to point at.
     private var byID: [String: UsageRecord] = [:]
 
-    /// How the tokens are actually paid for, so the headline can say whether it
-    /// is a bill or a list-price equivalent. Detected once: the plan does not
-    /// change while the app is open, and re-reading the file per render would
-    /// touch it thousands of times to learn nothing new.
-    let billing = Billing.detect()
-
     private(set) var estimator: Estimator
     private var index: FileIndex
     private let store: UsageStore

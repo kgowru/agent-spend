@@ -66,19 +66,6 @@ function Mark({ i, size = 10 }: { i: number; size?: number }) {
   );
 }
 
-/*
- * What the number actually is. On a flat rate plan it is a list price
- * equivalent, and the gap is large enough that leaving it unsaid is the biggest
- * overstatement the app could make.
- */
-function Caveat() {
-  return (
-    <Label tone={C.tertiary} className="leading-snug">
-      List price, not your bill. You are on Claude Max 5x, which is flat rate.
-    </Label>
-  );
-}
-
 /**
  * What the figures under the picker are showing, for a screen reader.
  *
@@ -204,8 +191,6 @@ function TodaySection({
         </div>
       </div>
 
-      <Caveat />
-
       <HourlyBars hours={hours} hovered={hovered} onHover={onHover} />
 
       <div className="flex flex-col gap-[5px]">
@@ -318,8 +303,6 @@ function PeriodSection({
           </>
         )}
       </div>
-
-      <Caveat />
 
       <DailyBars span={span} hovered={hovered} onHover={onHover} />
 
