@@ -1,18 +1,32 @@
-## AgentSpend v0.1.4
+## AgentSpend v0.1.5
 
-A small one. The warning about models with no figures yet can now be closed.
+Less text on screen, and empty days that look empty rather than broken.
 
-### The unpriced model warning has a close button
+### The list price line is gone
 
-When AgentSpend meets a model it has no price or energy coefficients for, it
-says so at the top of the window and counts those requests as zero. That is
-worth saying once. It was not worth saying on every launch for the weeks a new
-model spends waiting on the next release, with no way to acknowledge it.
+Since v0.1.3, a line under the headline named your plan and said the dollar
+figure was a list price, not your bill. It took two lines in a pane you read at
+a glance, and it showed on every launch. The Method pane and the README already
+say the same thing, so the line is gone.
 
-So the banner now has an X. What closing it remembers is the exact set of model
-names the warning was about, rather than just that a banner was closed once, so
-a model you have not seen before brings it back while the ones you already know
-about stay quiet.
+AgentSpend no longer reads `~/.claude.json` at all. That file was only read to
+fill in that line.
+
+### Empty days look empty
+
+On a day with no priced usage, the hourly chart used to draw as a blank strip,
+which looked like a chart that failed to load. It now draws a faint placeholder
+in each hour, flat and even so it can't be mistaken for data.
+
+"Nothing worth flagging in today's usage" now has an icon beside it, so an
+empty savings strip reads as a state rather than a gap.
+
+### Smaller fixes
+
+The unpriced model warning names the models and stops there. The second line,
+saying those requests count as zero, repeated what the headline already shows.
+
+"all savings" is now "All savings", like every other control.
 
 ### Install
 
@@ -21,7 +35,7 @@ Applications. Signed with an Apple Developer ID and notarized by Apple, so it
 opens with no Gatekeeper warning. Universal binary, Apple Silicon and Intel,
 about 7 MB.
 
-Upgrading from v0.1.3: replace the copy in Applications. Nothing to migrate.
+Upgrading from v0.1.4: replace the copy in Applications. Nothing to migrate.
 
 ### How much to trust these numbers
 
