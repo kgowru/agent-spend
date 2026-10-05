@@ -171,6 +171,12 @@ struct SelfTest {
                                 cacheRead: 5000, cwd: nil, gitBranch: nil,
                                 sessionId: nil, isSidechain: false, isSubagent: false)
         eq(est.wattHours(codex), nil, "energy: withheld yields nil, not zero")
+        // The Models table reads coefficients through tier(for:), not the
+        // estimator, so it has to honor the basis on its own.
+        ok(energy.tier(for: "gpt-5.6-sol") == nil,
+           "energy: withheld model has no coefficients to display")
+        ok(energy.tier(for: "claude-opus-5") != nil,
+           "energy: a measured-basis model still does")
         ok((est.cost(codex) ?? 0) > 0, "energy: but its cost is still computed")
     }
 
@@ -218,18 +224,18 @@ struct SelfTest {
         // Both resource files carry a tier and they must agree. The recommender
         // filters frontier-large off the ENERGY entry while the Models table
         // shows the priced one, so a disagreement silently splits the two.
-        for p in pricing.models {
-            eq(energy.entry(for: p.id)?.tier, p.tier,
-               "\(p.id) tier agrees between pricing and energy model")
+        for (id, p) in all {
+            eq(energy.entry(for: id)?.tier, p.tier,
+               "\(id) tier agrees between pricing and energy model")
         }
         // And the same check in reverse. The loop above is one-way: an
-        // ENERGY-only row passes it, because it never appears in
-        // pricing.models to be looked up. Such a row is worse than a missing
+        // ENERGY-only row passes it, because it never appears in the price
+        // catalog to be looked up. Such a row is worse than a missing
         // one — it costs $0 everywhere while still carrying a tier the
         // recommender filters on, so it can be proposed as a downshift target
         // that appears free. Resources/README.md rule 3 requires both files.
         for e in energy.models {
-            ok(pricing.models.contains { $0.id == e.id },
+            ok(all[e.id] != nil,
                "\(e.id) has energy coefficients and a published price")
         }
 
