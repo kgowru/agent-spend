@@ -566,6 +566,12 @@ struct SelfTest {
         astra.input += 1
         close(est.cost(astra) ?? -1, 4.89002, 1e-9,
               "gpt-6 Astra applies the long-context surcharge to the full request")
+        // The threshold is per request, so advice priced over a session must not
+        // sum requests into one probe: four 80K writes are four short requests
+        // ($4.00 at 1.25x of $10), not one 320K long one ($8.00).
+        close(Recommender.churnSaving(writes: 320_000, requests: 4, model: "gpt-6-astra",
+                                      provider: .codex, estimator: est), 4.0, 1e-9,
+              "churn saving on Astra is priced per request, not surcharged in aggregate")
 
         // An Anthropic record must still use Anthropic's terms.
         let claude = UsageRecord(id: "c", provider: .claude, timestamp: nil,
