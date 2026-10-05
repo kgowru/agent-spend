@@ -160,6 +160,10 @@ struct SelfTest {
         let est = Estimator(energy: energy, pricing: pricing)
         eq(est.hasCoefficients(for: "gpt-5.6-sol"), true,
            "energy: a withheld-energy model is still priceable")
+        eq(est.hasCoefficients(for: "gpt-6-astra"), true,
+           "energy: gpt-6 Astra is priceable")
+        eq(est.hasEnergyBasis(for: "gpt-6-astra"), false,
+           "energy: gpt-6 Astra has no energy basis")
         eq(est.hasEnergyBasis(for: "gpt-5.6-sol"), false,
            "energy: gpt has no energy basis")
         eq(est.hasEnergyBasis(for: "claude-opus-5"), true,
@@ -171,7 +175,127 @@ struct SelfTest {
                                 cacheRead: 5000, cwd: nil, gitBranch: nil,
                                 sessionId: nil, isSidechain: false, isSubagent: false)
         eq(est.wattHours(codex), nil, "energy: withheld yields nil, not zero")
+        // The Models table reads coefficients through tier(for:), not the
+        // estimator, so it has to honor the basis on its own.
+        ok(energy.tier(for: "gpt-5.6-sol") == nil,
+           "energy: withheld model has no coefficients to display")
+        ok(energy.tier(for: "claude-opus-5") != nil,
+           "energy: a measured-basis model still does")
         ok((est.cost(codex) ?? 0) > 0, "energy: but its cost is still computed")
+    }
+
+    /// The published rate card, transcribed from the two pricing pages in
+    /// pricing.json's `sources` on 2026-09-25.
+    ///
+    /// Pins the DERIVED cache dollars rather than only the base rates. Cache
+    /// terms are stored as multipliers, so a wrong multiplier is invisible in
+    /// the Models table and wrong in the total — and cache reads are ~95% of
+    /// local volume, so it is wrong in the part of the bill that matters most.
+    /// Opus 5.5 (0.05x) and Fable/Mythos 5.1 (0.025x) are the rows that break
+    /// if a per-model override is dropped and the 0.1x vendor default takes
+    /// over.
+    private mutating func rateCard(_ energy: EnergyModel,
+                                   _ pricing: PricingModel) throws {
+        // id, input, output, cache read, 5m write, 1h write — all $/MTok.
+        let card: [(String, Double, Double, Double, Double, Double)] = [
+            ("claude-opus-5-5",    4.0, 20.0, 0.20,  5.000,  8.000),
+            ("claude-opus-5",      5.0, 25.0, 0.50,  6.250, 10.000),
+            ("claude-sonnet-5",    2.0, 10.0, 0.20,  2.500,  4.000),
+            ("claude-fable-5-1",  10.0, 50.0, 0.25, 12.500, 20.000),
+            ("claude-mythos-5-1", 10.0, 50.0, 0.25, 12.500, 20.000),
+            ("claude-haiku-4-5",   1.0,  5.0, 0.10,  1.250,  2.000),
+            ("gpt-6-astra",       10.0, 50.0, 1.00, 12.500, 12.500),
+            ("gpt-6-sol",          2.0, 10.0, 0.20,  2.500,  2.500),
+            ("gpt-6-luna",         0.1,  0.5, 0.01,  0.125,  0.125),
+            ("gpt-5.6-sol",        4.0, 20.0, 0.40,  5.000,  5.000),
+            ("gpt-5.6-terra",      2.0, 12.0, 0.20,  2.500,  2.500),
+            ("gpt-5.6-luna",       0.2,  1.2, 0.02,  0.250,  0.250),
+        ]
+        let all = pricing.allPrices
+        for (id, input, output, read, w5m, w1h) in card {
+            guard let p = all[id],
+                  let m = p.cache ?? pricing.cacheMultipliers(for: p.provider) else {
+                ok(false, "\(id) is in the catalog with cache terms")
+                continue
+            }
+            close(p.input, input, 1e-9, "\(id) input")
+            close(p.output, output, 1e-9, "\(id) output")
+            close(p.input * m.read, read, 1e-9, "\(id) cache read")
+            close(p.input * m.write5m, w5m, 1e-9, "\(id) 5m cache write")
+            close(p.input * m.write1h, w1h, 1e-9, "\(id) 1h cache write")
+        }
+
+        // Both resource files carry a tier and they must agree. The recommender
+        // filters frontier-large off the ENERGY entry while the Models table
+        // shows the priced one, so a disagreement silently splits the two.
+        for (id, p) in all {
+            eq(energy.entry(for: id)?.tier, p.tier,
+               "\(id) tier agrees between pricing and energy model")
+        }
+        // And the same check in reverse. The loop above is one-way: an
+        // ENERGY-only row passes it, because it never appears in the price
+        // catalog to be looked up. Such a row is worse than a missing
+        // one — it costs $0 everywhere while still carrying a tier the
+        // recommender filters on, so it can be proposed as a downshift target
+        // that appears free. Resources/README.md rule 3 requires both files.
+        for e in energy.models {
+            ok(all[e.id] != nil,
+               "\(e.id) has energy coefficients and a published price")
+        }
+
+        // Opus 5.5 undercuts Opus 5 on every axis, cache reads included. A
+        // same-tier peer suggestion still pointing at an older Opus is quoting
+        // the more expensive model.
+        if let a = all["claude-opus-5-5"], let b = all["claude-opus-5"],
+           let ma = a.cache ?? pricing.cacheMultipliers(for: a.provider),
+           let mb = b.cache ?? pricing.cacheMultipliers(for: b.provider) {
+            ok(a.input < b.input && a.output < b.output
+                && a.input * ma.read < b.input * mb.read,
+               "claude-opus-5-5 undercuts claude-opus-5 on every axis")
+        }
+        // GPT-6 Sol and Luna undercut their 5.6 namesakes at the same tier,
+        // which is what moves the tier-downshift floor.
+        if let s6 = all["gpt-6-sol"], let s56 = all["gpt-5.6-sol"] {
+            ok(s6.input * 2 == s56.input && s6.output * 2 == s56.output,
+               "gpt-6-sol is half gpt-5.6-sol")
+        }
+        if let l6 = all["gpt-6-luna"], let l56 = all["gpt-5.6-luna"] {
+            ok(l6.input < l56.input && l6.output < l56.output,
+               "gpt-6-luna undercuts gpt-5.6-luna")
+        }
+
+        // End-to-end through the estimator, so an override is proven to reach
+        // the arithmetic rather than merely sitting in the JSON.
+        let est = Estimator(energy: energy, pricing: pricing)
+        var read = UsageRecord(id: "r", provider: .claude, timestamp: nil,
+                               model: "claude-opus-5-5", input: 0, output: 0,
+                               cacheWrite: 0, cacheWrite5m: 0, cacheWrite1h: 0,
+                               cacheRead: 1_000_000, cwd: nil, gitBranch: nil,
+                               sessionId: nil, isSidechain: false, isSubagent: false)
+        close(est.cost(read) ?? -1, 0.20, 1e-9,
+              "opus 5.5 reads cache at 0.05x, not the 0.1x vendor default")
+        read.model = "claude-opus-5"
+        close(est.cost(read) ?? -1, 0.50, 1e-9, "opus 5 still reads at 0.1x")
+
+        // Astra's probe must stay UNDER its 272K long-context threshold, or it
+        // measures the surcharged rate instead of the rate card: a 1M-token
+        // write is by definition a long-context request, and would read
+        // $25/MTok. 200K writes at $10 input x 1.25 = $2.50. The surcharge
+        // itself is covered in costs() against the threshold boundary.
+        var write = UsageRecord(id: "w", provider: .codex, timestamp: nil,
+                                model: "gpt-6-astra", input: 0, output: 0,
+                                cacheWrite: 200_000, cacheWrite5m: 0,
+                                cacheWrite1h: 0, cacheRead: 0, cwd: nil,
+                                gitBranch: nil, sessionId: nil,
+                                isSidechain: false, isSubagent: false)
+        close(est.cost(write) ?? -1, 2.50, 1e-9,
+              "gpt-6 astra writes cache at 1.25x input below its threshold")
+        // Luna carries no longContext block yet, so a 1M probe still reads the
+        // short-context rate. That asymmetry is the gap `notes` records.
+        write.model = "gpt-6-luna"
+        write.cacheWrite = 1_000_000
+        close(est.cost(write) ?? -1, 0.125, 1e-9,
+              "gpt-6 luna writes cache at 1.25x input")
     }
 
     private mutating func execute() -> Int32 {
@@ -186,6 +310,7 @@ struct SelfTest {
             try estimator(energy, pricing)
             try codex()
             try codexPricing(pricing)
+            try rateCard(energy, pricing)
             try sidecar()
             try withheldEnergy(energy, pricing)
         } catch {
@@ -428,6 +553,25 @@ struct SelfTest {
         read.cacheWrite = 0
         read.cacheRead = 1_000_000
         close(est.cost(read) ?? -1, 0.4, 1e-9, "gpt-5.6 cache read bills at 0.1x input")
+
+        // GPT-6 Astra charges standard rates through 272K prompt tokens, then
+        // applies 2x input/cache and 1.5x output to the entire request.
+        var astra = UsageRecord(id: "astra", provider: .codex, timestamp: nil,
+                                model: "gpt-6-astra", input: 72_000, output: 10_000,
+                                cacheWrite: 100_000, cacheWrite5m: 0, cacheWrite1h: 0,
+                                cacheRead: 100_000, cwd: nil, gitBranch: nil,
+                                sessionId: nil, isSidechain: false, isSubagent: false)
+        close(est.cost(astra) ?? -1, 2.57, 1e-9,
+              "gpt-6 Astra uses standard rates at the 272K boundary")
+        astra.input += 1
+        close(est.cost(astra) ?? -1, 4.89002, 1e-9,
+              "gpt-6 Astra applies the long-context surcharge to the full request")
+        // The threshold is per request, so advice priced over a session must not
+        // sum requests into one probe: four 80K writes are four short requests
+        // ($4.00 at 1.25x of $10), not one 320K long one ($8.00).
+        close(Recommender.churnSaving(writes: 320_000, requests: 4, model: "gpt-6-astra",
+                                      provider: .codex, estimator: est), 4.0, 1e-9,
+              "churn saving on Astra is priced per request, not surcharged in aggregate")
 
         // An Anthropic record must still use Anthropic's terms.
         let claude = UsageRecord(id: "c", provider: .claude, timestamp: nil,

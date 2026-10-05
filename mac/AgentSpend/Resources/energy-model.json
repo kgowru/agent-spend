@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-09-13",
+  "generated": "2026-09-25",
   "unit": "watt_hours_per_1000_tokens",
   "boundary": "full-datacenter",
   "boundaryNote": "Includes accelerator, host CPU/DRAM, network/storage, and facility PUE. GPU-only accounting would be ~2.4x lower \u2014 Google's own comparison of the two boundaries.",
@@ -160,6 +160,13 @@
       "confidence": "low"
     },
     {
+      "id": "claude-opus-5-5",
+      "tier": "frontier-large",
+      "basis": "tier-proxy",
+      "confidence": "low",
+      "note": "Published at $4/$20, a tier below Opus 5 on price. Tier here is still inferred from price, so confidence stays low. Note that a cheaper price does not imply less compute, which is exactly why this basis is a proxy."
+    },
+    {
       "id": "claude-opus-5",
       "tier": "frontier-large",
       "basis": "tier-proxy",
@@ -213,6 +220,27 @@
       "tier": "frontier-small",
       "basis": "tier-proxy",
       "confidence": "low"
+    },
+    {
+      "id": "gpt-6-astra",
+      "tier": "frontier-large",
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
+    },
+    {
+      "id": "gpt-6-sol",
+      "tier": "frontier-large",
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact. This model is the clearest case for withholding: at $2/$10 it prices below the mid-tier Terra 5.6 while sitting a tier above it, so price ordering and capability ordering disagree outright."
+    },
+    {
+      "id": "gpt-6-luna",
+      "tier": "frontier-small",
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.6-sol",
