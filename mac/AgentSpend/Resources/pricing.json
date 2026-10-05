@@ -1,13 +1,18 @@
 {
-  "schemaVersion": 3,
-  "generated": "2026-09-17",
+  "schemaVersion": 4,
+  "generated": "2026-09-25",
   "currency": "USD",
   "unit": "per_million_tokens",
   "notes": [
-    "Anthropic rates verified against the published pricing table on 2026-09-17.",
+    "Anthropic and OpenAI rates verified against both published pricing pages in `sources` on 2026-09-25.",
     "cacheMultipliers is keyed by provider: Anthropic charges a premium to WRITE the cache (1.25x for the 5-minute TTL, 2x for the hour) and reads at 0.1x. A model may override its vendor's terms via its own `cache` block, because neither vendor is internally uniform.",
     "Fable 5.1 and Mythos 5.1 read cache at 0.025x ($0.25/MTok), not 0.1x. Cache reads are ~95% of local token volume, so applying the vendor default to them is a 4x overcharge on almost the whole bill.",
-    "Sonnet 5 is $2/$10. The increase to $3/$15 scheduled for 2026-09-01 was cancelled and the launch price made permanent."
+    "Opus 5.5 reads cache at 0.05x ($0.20/MTok), not 0.1x. Same trap as Fable 5.1, half the size: the vendor default would overcharge it 2x on ~95% of the bill.",
+    "Sonnet 5 is $2/$10. The increase to $3/$15 scheduled for 2026-09-01 was cancelled and the launch price made permanent.",
+    "Opus 5.5 is a new tier BELOW Opus 5, at $4/$20 against $5/$25, and is cheaper on cache reads too (0.05x against 0.10x). It undercuts the model above it on every axis, so a same-tier peer suggestion that still points at an older Opus is quoting the more expensive model.",
+    "GPT-6 Sol and GPT-6 Luna (launched 2026-09-23) undercut the GPT-5.6 models at the same tier: Sol is exactly half Sol 5.6 ($2/$10 against $4/$20), and Luna is half on input and less than half on output ($0.10/$0.50 against $0.20/$1.20). Any tier-downshift figure computed before these rows existed was measured against a floor roughly 2x too high.",
+    "GPT-5.6 Sol's $4/$20 is PROMOTIONAL and guaranteed only through 2026-11-21. Re-check it after that date.",
+    "NOT MODELLED: OpenAI publishes a long-context tier for every GPT-5.6 and GPT-6 model here: 2x input, 2x cached input, 2x cache write and 1.5x output once a request crosses the long-context prompt threshold. Every OpenAI figure below is the short-context rate, so a very large prompt is under-billed. Adding it needs a per-model threshold in the schema, which is a change to the estimator and not just to this table."
   ],
   "cacheMultipliers": {
     "claude": {
@@ -65,6 +70,20 @@
       "output": 50.0,
       "tier": "frontier-large",
       "confidence": "high"
+    },
+    {
+      "id": "claude-opus-5-5",
+      "provider": "claude",
+      "input": 4.0,
+      "output": 20.0,
+      "tier": "frontier-large",
+      "confidence": "high",
+      "cache": {
+        "read": 0.05,
+        "write5m": 1.25,
+        "write1h": 2.0
+      },
+      "why": "A new tier BELOW Opus 5, not above it: $4/$20 against $5/$25, and cache hits at 0.05x ($0.20/MTok) against 0.10x ($0.50/MTok). Cheaper than the model above it on every axis. The 0.05x read is the reason for the override. The vendor default would overcharge it 2x on the ~95% of local volume that is cache reads."
     },
     {
       "id": "claude-opus-5",
@@ -141,6 +160,48 @@
       "confidence": "high"
     },
     {
+      "id": "gpt-6-astra",
+      "provider": "codex",
+      "input": 10.0,
+      "output": 50.0,
+      "tier": "frontier-large",
+      "confidence": "high",
+      "cache": {
+        "read": 0.1,
+        "write5m": 1.25,
+        "write1h": 1.25
+      },
+      "why": "Published at $10 input, $1.00 cached input (0.1x), $12.50 cache write (1.25x), $50 output. The flagship of the GPT-6 line and the only one of the three that is not cheaper than its GPT-5.6 counterpart."
+    },
+    {
+      "id": "gpt-6-sol",
+      "provider": "codex",
+      "input": 2.0,
+      "output": 10.0,
+      "tier": "frontier-large",
+      "confidence": "high",
+      "cache": {
+        "read": 0.1,
+        "write5m": 1.25,
+        "write1h": 1.25
+      },
+      "why": "Published at $2 input, $0.20 cached input (0.1x), $2.50 cache write (1.25x), $10 output, exactly half Sol 5.6 at the same tier. Note it also undercuts the mid-tier GPT-5.6 Terra ($2/$12) on output while sitting a tier above it, so a downshift away from it saves nothing."
+    },
+    {
+      "id": "gpt-6-luna",
+      "provider": "codex",
+      "input": 0.1,
+      "output": 0.5,
+      "tier": "frontier-small",
+      "confidence": "high",
+      "cache": {
+        "read": 0.1,
+        "write5m": 1.25,
+        "write1h": 1.25
+      },
+      "why": "Published at $0.10 input, $0.01 cached input (0.1x), $0.125 cache write (1.25x), $0.50 output. Half Luna 5.6 on input and less than half on output ($0.50 against $1.20)."
+    },
+    {
       "id": "gpt-5.6-sol",
       "provider": "codex",
       "input": 4.0,
@@ -152,7 +213,7 @@
         "write5m": 1.25,
         "write1h": 1.25
       },
-      "why": "Promotional rate, guaranteed by OpenAI only through 2026-11-21. Re-check after that date."
+      "why": "Promotional rate, guaranteed by OpenAI only through 2026-11-21. Re-check after that date. GPT-6 Sol is now half this price at the same tier."
     },
     {
       "id": "gpt-5.6-terra",
@@ -257,5 +318,8 @@
     "note": "Models observed in local logs but absent from the published catalog. Priced at their apparent tier and flagged in the UI rather than silently guessed. Currently empty: claude-opus-5, the only occupant, turned out to be published at exactly the price that had been assumed for it.",
     "entries": []
   },
-  "source": "https://platform.claude.com/docs/en/about-claude/pricing"
+  "sources": [
+    "https://platform.claude.com/docs/en/about-claude/pricing",
+    "https://developers.openai.com/api/docs/pricing"
+  ]
 }
