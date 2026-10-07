@@ -160,6 +160,13 @@
       "confidence": "low"
     },
     {
+      "id": "claude-opus-5-5",
+      "tier": "frontier-large",
+      "basis": "tier-proxy",
+      "confidence": "low",
+      "note": "Published at $4/$20. Kept in the large tier with Opus 5 rather than demoted on price: the cut is a pricing decision, and nothing published says the model got smaller."
+    },
+    {
       "id": "claude-opus-5",
       "tier": "frontier-large",
       "basis": "tier-proxy",
@@ -191,6 +198,12 @@
       "confidence": "low"
     },
     {
+      "id": "claude-sonnet-5-5",
+      "tier": "frontier-mid",
+      "basis": "tier-proxy",
+      "confidence": "low"
+    },
+    {
       "id": "claude-sonnet-5",
       "tier": "frontier-mid",
       "basis": "tier-proxy",
@@ -213,6 +226,34 @@
       "tier": "frontier-small",
       "basis": "tier-proxy",
       "confidence": "low"
+    },
+    {
+      "id": "gpt-6-astra",
+      "tier": "frontier-large",
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "tier": "frontier-mid",
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
+    },
+    {
+      "id": "gpt-6-sol",
+      "tier": "frontier-mid",
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
+    },
+    {
+      "id": "gpt-6-luna",
+      "tier": "frontier-small",
+      "basis": "withheld",
+      "confidence": "none",
+      "note": "Energy withheld. The tier here is inferred from price, and price does not track compute across vendors, so a number would be directionally unreliable rather than merely uncertain. Cost for this model is exact."
     },
     {
       "id": "gpt-5.6-sol",
