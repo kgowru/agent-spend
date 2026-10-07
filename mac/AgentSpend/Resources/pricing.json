@@ -1,13 +1,16 @@
 {
   "schemaVersion": 3,
-  "generated": "2026-09-17",
+  "generated": "2026-10-05",
   "currency": "USD",
   "unit": "per_million_tokens",
   "notes": [
     "Anthropic rates verified against the published pricing table on 2026-09-17.",
+    "Anthropic and OpenAI rates re-verified on 2026-10-05 for Opus 5.5, Sonnet 5.5, and the GPT-6 line.",
     "cacheMultipliers is keyed by provider: Anthropic charges a premium to WRITE the cache (1.25x for the 5-minute TTL, 2x for the hour) and reads at 0.1x. A model may override its vendor's terms via its own `cache` block, because neither vendor is internally uniform.",
     "Fable 5.1 and Mythos 5.1 read cache at 0.025x ($0.25/MTok), not 0.1x. Cache reads are ~95% of local token volume, so applying the vendor default to them is a 4x overcharge on almost the whole bill.",
-    "Sonnet 5 is $2/$10. The increase to $3/$15 scheduled for 2026-09-01 was cancelled and the launch price made permanent."
+    "Sonnet 5 is $2/$10. The increase to $3/$15 scheduled for 2026-09-01 was cancelled and the launch price made permanent.",
+    "Opus 5.5 reads cache at 0.05x ($0.20/MTok), half the 0.1x vendor default.",
+    "GPT-6 models, like GPT-5.6, double their rates above 272K input tokens (output 1.5x). That long-context tier is not modeled here, so a Codex request past 272K is under-billed."
   ],
   "cacheMultipliers": {
     "claude": {
@@ -67,6 +70,20 @@
       "confidence": "high"
     },
     {
+      "id": "claude-opus-5-5",
+      "provider": "claude",
+      "input": 4.0,
+      "output": 20.0,
+      "tier": "frontier-large",
+      "confidence": "high",
+      "cache": {
+        "read": 0.05,
+        "write5m": 1.25,
+        "write1h": 2.0
+      },
+      "why": "Published at $4/$20. Cache hits bill at $0.20/MTok, half the 0.1x vendor default."
+    },
+    {
       "id": "claude-opus-5",
       "provider": "claude",
       "input": 5.0,
@@ -108,6 +125,14 @@
       "confidence": "high"
     },
     {
+      "id": "claude-sonnet-5-5",
+      "provider": "claude",
+      "input": 2.0,
+      "output": 10.0,
+      "tier": "frontier-mid",
+      "confidence": "high"
+    },
+    {
       "id": "claude-sonnet-5",
       "provider": "claude",
       "input": 2.0,
@@ -139,6 +164,60 @@
       "output": 5.0,
       "tier": "frontier-small",
       "confidence": "high"
+    },
+    {
+      "id": "gpt-6-astra",
+      "provider": "codex",
+      "input": 10.0,
+      "output": 50.0,
+      "tier": "frontier-large",
+      "confidence": "high",
+      "cache": {
+        "read": 0.1,
+        "write5m": 1.25,
+        "write1h": 1.25
+      },
+      "why": "Published at $10/$50, cached input $1, cache writes $12.50."
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "provider": "codex",
+      "input": 2.0,
+      "output": 10.0,
+      "tier": "frontier-mid",
+      "confidence": "high",
+      "cache": {
+        "read": 0.05,
+        "write5m": 1.25,
+        "write1h": 1.25
+      },
+      "why": "Cached input is $0.10/MTok, half of GPT-6 Sol's 0.1x."
+    },
+    {
+      "id": "gpt-6-sol",
+      "provider": "codex",
+      "input": 2.0,
+      "output": 10.0,
+      "tier": "frontier-mid",
+      "confidence": "high",
+      "cache": {
+        "read": 0.1,
+        "write5m": 1.25,
+        "write1h": 1.25
+      }
+    },
+    {
+      "id": "gpt-6-luna",
+      "provider": "codex",
+      "input": 0.1,
+      "output": 0.5,
+      "tier": "frontier-small",
+      "confidence": "high",
+      "cache": {
+        "read": 0.1,
+        "write5m": 1.25,
+        "write1h": 1.25
+      }
     },
     {
       "id": "gpt-5.6-sol",
