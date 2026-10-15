@@ -146,8 +146,8 @@ def main():
           str(sorted(seen_models)))
 
     print("\n7. Rate card against the published pricing pages")
-    # Effective dollars per MTok, transcribed from the two `sources` URLs in
-    # pricing.json on 2026-09-25. The point is to pin the DERIVED cache rates,
+    # Effective dollars per MTok, transcribed from the Anthropic and OpenAI
+    # pricing pages on 2026-09-25. The point is to pin the DERIVED cache rates,
     # not just the base ones: cache terms are stored as multipliers, so a wrong
     # multiplier is invisible in the table and wrong in the bill. Opus 5.5
     # (0.05x) and Fable/Mythos 5.1 (0.025x) are the rows that would break if

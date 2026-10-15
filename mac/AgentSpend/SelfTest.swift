@@ -180,8 +180,8 @@ struct SelfTest {
         ok((est.cost(codex) ?? 0) > 0, "energy: but its cost is still computed")
     }
 
-    /// The published rate card, transcribed from the two `sources` URLs in
-    /// pricing.json on 2026-09-25.
+    /// The published rate card, transcribed from the Anthropic and OpenAI
+    /// pricing pages on 2026-09-25.
     ///
     /// Pins the DERIVED cache dollars rather than only the base rates. Cache
     /// terms are stored as multipliers, so a wrong multiplier is invisible in
