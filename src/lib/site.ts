@@ -11,12 +11,20 @@ export const REPO_URL = "https://github.com/kgowru/agent-spend";
 export const RELEASES_URL = `${REPO_URL}/releases/latest`;
 
 /*
- * The download buttons hand over the disk image directly, no stop at the
- * release page. GitHub redirects `/releases/latest/download/<asset>` to
- * whichever release is newest, so this never needs bumping on a new version.
- * The one thing it depends on is the asset staying named AgentSpend.dmg.
+ * The disk image itself, no stop at the release page. GitHub redirects
+ * `/releases/latest/download/<asset>` to whichever release is newest, so this
+ * never needs bumping on a new version. The one thing it depends on is the
+ * asset staying named AgentSpend.dmg.
  */
-export const DOWNLOAD_URL = `${REPO_URL}/releases/latest/download/AgentSpend.dmg`;
+export const DMG_URL = `${REPO_URL}/releases/latest/download/AgentSpend.dmg`;
+
+/*
+ * What the download buttons link to. It is our own route, which counts the
+ * click and sends the visitor on to DMG_URL. GitHub's download count covers
+ * every download from anywhere; this one covers the ones that came from the
+ * site. See src/app/download/route.ts.
+ */
+export const DOWNLOAD_URL = "/download";
 export const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
 /* Nothing links here yet: the post isn't published. Kept so the hero and footer
  * links can go back in as they were the day it is. */

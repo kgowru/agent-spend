@@ -7,7 +7,9 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       // The feedback form is a POST endpoint, so there is nothing to crawl.
-      disallow: "/api/",
+      // /download is a redirect that counts clicks, and crawlers following it
+      // would inflate the count.
+      disallow: ["/api/", "/download"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
