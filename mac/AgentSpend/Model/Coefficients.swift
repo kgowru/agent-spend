@@ -65,11 +65,12 @@ struct EnergyModel: Decodable, Sendable {
     let equivalences: Equivalences
     let grid: Grid
 
-    private var tierByModel: [String: String] { Dictionary(models.map { ($0.id, $0.tier) }) { a, _ in a } }
-
+    /// `nil` for a withheld-basis model as well as an unknown one. The tier on
+    /// a withheld row exists for the recommender, not as an energy claim, so
+    /// handing out its coefficients would print the number the row withholds.
     func tier(for model: String) -> TierCoefficients? {
-        guard let t = tierByModel[model] else { return nil }
-        return tiers[t]
+        guard let e = entry(for: model), e.basis != "withheld" else { return nil }
+        return tiers[e.tier]
     }
 
     func entry(for model: String) -> ModelEntry? { models.first { $0.id == model } }
