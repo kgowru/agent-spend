@@ -104,14 +104,14 @@ want its discovery.
 ## Things a public release will get asked about, and where you stand
 
 - **"Are the energy numbers real?"** They're *estimates*, and the app is already
-  built to say so. The Method tab shows every coefficient, its band, and its
+  built to say so. The Settings pane shows every coefficient, its band, and its
   sources, and the app leads with exact **cost** and *relative* comparisons. Own
   this in the README; it's a strength, not a liability. Lead with "estimated."
 - **"Does it phone home?"** No. One network call exists, a once-a-day GET to
   the GitHub releases API for a version number, and it carries no identifier,
   no usage data, and no query parameters, so it can reveal that somebody checked
   but never who or what they spent. Everything else is local, and the check is
-  switchable in the Method pane. Say the precise version loudly; "your data
+  switchable in Settings. Say the precise version loudly; "your data
   never leaves your Mac" is the selling point, and it's still true.
 - **Affiliation and logos.** It reads these tools' logs but isn't affiliated
   with any of their vendors. The README carries a "not affiliated" section, and

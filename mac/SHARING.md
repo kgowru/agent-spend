@@ -34,7 +34,7 @@ configure; it picks up your usage automatically and updates live.
   logs but isn't affiliated with Anthropic. The bundle is just the app and two
   small reference data files. Its only network call is a daily check of GitHub
   for a newer version. That sends nothing about you, and you can switch it off
-  in the Method pane. If you'd rather build it yourself, the source is public
+  in Settings. If you'd rather build it yourself, the source is public
   (ask whoever sent this for the link).
 
 ## Uninstall

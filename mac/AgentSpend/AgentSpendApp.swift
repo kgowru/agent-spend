@@ -54,6 +54,8 @@ enum Main {
 struct AgentSpendApp: App {
     @StateObject private var engine: EngineBox = EngineBox()
 
+    init() { LaunchAtLogin.shared.enableOnFirstLaunch() }
+
     var body: some Scene {
         MenuBarExtra {
             Group {

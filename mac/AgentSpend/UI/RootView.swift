@@ -40,6 +40,8 @@ struct DevBadge: View {
 struct RootView: View {
     @ObservedObject var engine: UsageEngine
     @State private var tab: Tab
+    /// Where Settings' Back button goes: whichever tab you opened it from.
+    @State private var returnTab: Tab = .home
     /// Shared with `TodayView`. Held here too so the panel can reset it on open.
     @AppStorage("historyDays") private var days = 1
 
@@ -57,11 +59,13 @@ struct RootView: View {
     }
 
     enum Tab: String, CaseIterable, Identifiable {
-        case home = "Home", sessions = "Sessions", savings = "Savings", method = "Method"
+        case home = "Home", sessions = "Sessions", savings = "Savings"
+        case settings = "Settings"
         var id: String { rawValue }
 
-        /// Method is reached from the footer instead. It's reference material
-        /// you read once, not a pane you live in.
+        /// Settings is reached from the footer's gear instead. It holds the
+        /// switches and the methodology, which you visit once in a while
+        /// rather than live in.
         static let segments: [Tab] = [.home, .sessions, .savings]
     }
 
@@ -97,7 +101,7 @@ struct RootView: View {
                     case .home:     HomeView(engine: engine) { tab = .savings }
                     case .sessions: SessionsView(engine: engine)
                     case .savings:  InsightsView(engine: engine)
-                    case .method:   MethodologyView(engine: engine)
+                    case .settings: SettingsView(engine: engine) { tab = returnTab }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -108,8 +112,9 @@ struct RootView: View {
             .frame(maxHeight: .infinity)
 
             Divider()
-            FooterView(engine: engine, tab: $tab)
+            FooterView(engine: engine, tab: $tab, returnTab: returnTab)
         }
+        .onChange(of: tab) { _, new in if new != .settings { returnTab = new } }
         // A fully definite size, both axes. MenuBarExtra's popover proposes its
         // own height during layout, and anything flexible here (a ScrollView
         // under `maxHeight`, say) can resolve that proposal to zero and render
@@ -156,7 +161,7 @@ struct FooterView: View {
     @ObservedObject var engine: UsageEngine
     @ObservedObject var updates = UpdateChecker.shared
     @Binding var tab: RootView.Tab
-    @AppStorage("menuBarMetric") private var metric = MenuBarMetric.cost
+    var returnTab: RootView.Tab = .home
     /// Read here as well as in the checker so switching the setting off hides an
     /// already-found update immediately, rather than at the next launch.
     @AppStorage("updateCheckEnabled") private var updateChecks = true
@@ -183,22 +188,21 @@ struct FooterView: View {
                 }
                 .help("AgentSpend \(update.version) is available. Opens the release page.")
             }
-            // Toggles what the menu bar item displays — cost or energy. The icon
-            // shows what's on the bar now; clicking swaps to the other.
-            Button {
-                metric = metric == .energy ? .cost : .energy
-            } label: {
-                Image(systemName: metric == .energy ? "bolt.fill" : "dollarsign")
-            }
-            .help("Menu bar shows \(metric == .energy ? "energy" : "cost"). Click to show \(metric == .energy ? "cost" : "energy")")
             // No Refresh button: the FSEvents watcher re-ingests within a couple
             // of seconds of Claude Code writing, with a 60s full-rescan backstop,
             // so the number is already current and the button only ever invited
             // doubt about that. The "updated" timestamp on the left is the honest
             // version of the same reassurance.
-            Button(tab == .method ? "Done" : "Method") {
-                tab = tab == .method ? .home : .method
+            // Opens the Settings pane, or closes it again. Settings holds the
+            // cost/energy choice for the menu bar item, which used to be its
+            // own button here, and everything the Method pane used to show.
+            Button {
+                tab = tab == .settings ? returnTab : .settings
+            } label: {
+                Image(systemName: "gearshape")
             }
+            .help("Settings")
+            .accessibilityLabel("Settings")
             // Last, hard right — the one irreversible action in the row, kept
             // away from the things you click often.
             Button("Quit") { NSApplication.shared.terminate(nil) }
@@ -207,6 +211,19 @@ struct FooterView: View {
         .font(.caption)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+}
+
+/// Top of the Settings pane, which opens from the footer rather than the tabs
+/// and so needs its own way out.
+struct BackButton: View {
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Label("Back", systemImage: "chevron.left")
+        }
+        .buttonStyle(.borderless)
+        .font(.caption)
     }
 }
 
