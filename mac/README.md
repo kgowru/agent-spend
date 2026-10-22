@@ -39,13 +39,13 @@ sources shown.
 Coefficients are anchored to the three independent measurements that converge on
 ~0.3 Wh for a median frontier query: Google's Gemini disclosure (0.24 Wh),
 Microsoft's peer-reviewed *Joule* study (0.31 Wh), and Epoch AI's GPT-4o model
-(0.30 Wh). Those are then scaled by tier. See the Method pane for the full list.
+(0.30 Wh). Those are then scaled by tier. See Settings for the full list.
 
 **The dominant uncertainty is `cacheReadFactor`.** Cache reads are ~95% of local
 Claude Code token volume, so whether a cache hit costs 10% or 1% of a fresh
 input token swings the total ~4.7×. There is no published energy measurement of
 a prompt-cache hit. The 10% price discount is a billing decision, not a
-measured ratio. It's a slider in the Method pane rather than a buried constant.
+measured ratio. It's a slider in Settings rather than a buried constant.
 
 ## Ingestion, and why it's fussy
 
@@ -152,7 +152,7 @@ glyph run, see `MenuBarLabel`).
 ./.build/release/AgentSpend --selftest        # 74 assertions
 ./.build/release/AgentSpend --verify [root]   # aggregates, diffable vs the oracle
 ./.build/release/AgentSpend --render <dir>    # render each pane to PNG
-./.build/release/AgentSpend --window [--tab method]   # views in a normal window
+./.build/release/AgentSpend --window [--tab settings] # views in a normal window
 ./.build/release/AgentSpend --bench           # time the derived analytics (cold + memo)
 ```
 

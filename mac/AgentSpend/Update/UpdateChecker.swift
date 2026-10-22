@@ -6,7 +6,7 @@ import Foundation
 /// that answers the question: an unauthenticated GET for a version string. It
 /// sends no identifier, no usage data, and no query parameters — nothing about
 /// you goes out, which is why the "nothing leaves your Mac" promise survives it
-/// intact. It can be switched off in the Method pane.
+/// intact. It can be switched off in Settings, behind the gear in the footer.
 ///
 /// It also never downloads or installs anything. Clicking the footer badge opens
 /// the release page in a browser and the upgrade stays a deliberate, visible act

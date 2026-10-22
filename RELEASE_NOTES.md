@@ -1,32 +1,26 @@
-## AgentSpend v0.1.5
+## AgentSpend v0.1.7
 
-Less text on screen, and empty days that look empty rather than broken.
+AgentSpend now opens when you log in, and its settings have a home.
 
-### The list price line is gone
+### Opens at login
 
-Since v0.1.3, a line under the headline named your plan and said the dollar
-figure was a list price, not your bill. It took two lines in a pane you read at
-a glance, and it showed on every launch. The Method pane and the README already
-say the same thing, so the line is gone.
+AgentSpend adds itself to your login items the first time it runs, so it is
+already counting when you start work. Turn it off in Settings, or in System
+Settings under General, Login Items. If you turn it off, it stays off.
 
-AgentSpend no longer reads `~/.claude.json` at all. That file was only read to
-fill in that line.
+### Settings
 
-### Empty days look empty
+The gear at the bottom of the panel opens Settings. It holds:
 
-On a day with no priced usage, the hourly chart used to draw as a blank strip,
-which looked like a chart that failed to load. It now draws a faint placeholder
-in each hour, flat and even so it can't be mistaken for data.
+- **Menu bar shows:** cost ($) or energy (Wh). This replaces the $ button that
+  used to sit in the footer.
+- **Open at login.**
+- **Check for updates.** The daily version check could be turned off before,
+  but there was no switch for it in the app. Now there is.
 
-"Nothing worth flagging in today's usage" now has an icon beside it, so an
-empty savings strip reads as a state rather than a gap.
-
-### Smaller fixes
-
-The unpriced model warning names the models and stops there. The second line,
-saying those requests count as zero, repeated what the headline already shows.
-
-"all savings" is now "All savings", like every other control.
+Everything that was on the Method page is now at the bottom of Settings, with a
+short note at the top on where the numbers come from. The Method button is gone
+from the footer.
 
 ### Install
 
@@ -35,14 +29,15 @@ Applications. Signed with an Apple Developer ID and notarized by Apple, so it
 opens with no Gatekeeper warning. Universal binary, Apple Silicon and Intel,
 about 7 MB.
 
-Upgrading from v0.1.4: replace the copy in Applications. Nothing to migrate.
+Upgrading from v0.1.6: replace the copy in Applications. Nothing to migrate.
+The first launch after upgrading turns on Open at login.
 
 ### How much to trust these numbers
 
 The dollars are exact arithmetic on published rates, and are a list price
 equivalent rather than an invoice if you are on a subscription. The energy is an
-estimate, shown for Anthropic models only. The Method pane shows every
-coefficient, its range, and its source.
+estimate, shown for Anthropic models only. Settings shows every coefficient,
+its range, and its source.
 
 Makes no network calls beyond the once-a-day version check, which you can turn
 off. Independent project, not affiliated with Anthropic, OpenAI, Google, GitHub,

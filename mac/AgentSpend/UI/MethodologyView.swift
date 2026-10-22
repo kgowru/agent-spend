@@ -1,19 +1,28 @@
 import SwiftUI
 
-/// Where the numbers come from, and the one knob that matters.
+/// Where the numbers come from, and the one knob that matters. Shown at the
+/// bottom of Settings.
 ///
 /// This pane is not an appendix — a tool that turns unpublished data into a
 /// confident-looking figure is worse than useless, so the uncertainty is part
 /// of the product surface.
 struct MethodologyView: View {
     @ObservedObject var engine: UsageEngine
-    @AppStorage("menuBarMetric") private var metric = MenuBarMetric.cost
 
     var body: some View {
         let all = engine.records
         let defaults = engine.energyModel.defaults
 
         VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("How AgentSpend gets its numbers")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text("Cost comes from each provider's published prices. Energy is an "
+                     + "estimate. The sections below show how it's worked out, and how "
+                     + "far to trust it.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+
             // The per-model baseline lives here rather than in its own tab: it's
             // reference data, and it reads better next to the caveats that say
             // how much to trust it.
@@ -85,13 +94,6 @@ struct MethodologyView: View {
                     Text("• " + $0).font(.caption2).foregroundStyle(.tertiary)
                 }
             }
-
-            Divider()
-
-            Picker("Menu bar shows", selection: $metric) {
-                ForEach(MenuBarMetric.allCases) { Text($0.label).tag($0) }
-            }
-            .font(.caption)
 
             Text("Coefficients generated \(engine.energyModel.generated). These figures "
                  + "decay fast — Google reported a 33× energy reduction in 12 months.")
