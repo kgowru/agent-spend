@@ -8,7 +8,7 @@
 
 So "switch to a cheaper model" becomes a decision you can put a number on, instead of a hunch.
 
-[Download](https://github.com/kgowru/agent-spend/releases/latest) · [Why I built it](content/blog/why-i-built-agentspend.md) · [The energy method](#how-much-to-trust-these-numbers)
+[Download](https://github.com/kgowru/agent-spend/releases/latest) · [Why I built it](https://kapilgowru.xyz/blog/agent-spend) · [The energy method](#how-much-to-trust-these-numbers)
 
 </div>
 
@@ -80,7 +80,7 @@ Use the energy side to compare one model against another, not as a meter reading
 
 The **Method** pane shows every number the estimate uses, its range, and where it
 came from, and lets you drag the single assumption that moves the total most. The
-full reasoning is in the [blog post](content/blog/why-i-built-agentspend.md).
+full reasoning is in the [blog post](https://kapilgowru.xyz/blog/agent-spend).
 
 ## Build from source
 
@@ -111,7 +111,7 @@ This is a monorepo:
 
 - **`mac/`**: the Swift menu bar app (see [`mac/README.md`](mac/README.md) for
   architecture, and [`mac/RELEASING.md`](mac/RELEASING.md) for how releases are cut).
-- **`src/`, `content/`, `public/`**: the Next.js landing site and blog.
+- **`src/`, `public/`**: the Next.js landing site.
 - **`tools/`**: the Python reference implementation and verification scripts.
 
 ## Privacy
