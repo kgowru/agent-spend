@@ -143,14 +143,11 @@ enum Recommender {
             // OpenAI bills nothing at all to write a cache entry before GPT-5.6.
             // That fabricated figure also drove `weight`, so it outranked real
             // advice.
-            let avoidable = Int(Double(worst.totals.cacheWrite) * 0.4)
-            let probe = UsageRecord(
-                id: "", provider: worst.provider, timestamp: nil,
-                model: worst.models.first ?? "", input: 0, output: 0,
-                cacheWrite: avoidable, cacheWrite5m: 0, cacheWrite1h: 0,
-                cacheRead: 0, cwd: nil, gitBranch: nil, sessionId: nil,
-                isSidechain: false, isSubagent: false)
-            let wasted = estimator.cost(probe) ?? 0
+            let wasted = churnSaving(writes: Int(Double(worst.totals.cacheWrite) * 0.4),
+                                     requests: worst.requests,
+                                     model: worst.models.first ?? "",
+                                     provider: worst.provider,
+                                     estimator: estimator)
             out.append(Recommendation(
                 id: "churn-\(worst.id)",
                 kind: .cacheChurn,
@@ -214,6 +211,25 @@ enum Recommender {
         }
 
         return out.sorted { $0.weight > $1.weight }
+    }
+
+    /// Dollars for `writes` avoidable cache-write tokens spread over a session.
+    ///
+    /// Priced one average request at a time, then scaled. `Estimator.cost` is
+    /// per-request and no longer linear: a model with a long-context threshold
+    /// surcharges the whole request once its prompt crosses it, so a single
+    /// probe holding a session's worth of writes would cross 272K on Astra
+    /// from many requests that never did, and double the saving.
+    static func churnSaving(writes: Int, requests: Int, model: String,
+                            provider: Provider, estimator: Estimator) -> Double {
+        let n = max(requests, 1)
+        let probe = UsageRecord(
+            id: "", provider: provider, timestamp: nil,
+            model: model, input: 0, output: 0,
+            cacheWrite: writes / n, cacheWrite5m: 0, cacheWrite1h: 0,
+            cacheRead: 0, cwd: nil, gitBranch: nil, sessionId: nil,
+            isSidechain: false, isSubagent: false)
+        return (estimator.cost(probe) ?? 0) * Double(n)
     }
 
     private static func churnBaseline(_ sessions: [UsageEngine.SessionSummary]) -> String {

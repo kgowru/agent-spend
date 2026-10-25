@@ -65,11 +65,12 @@ struct EnergyModel: Decodable, Sendable {
     let equivalences: Equivalences
     let grid: Grid
 
-    private var tierByModel: [String: String] { Dictionary(models.map { ($0.id, $0.tier) }) { a, _ in a } }
-
+    /// `nil` for a withheld-basis model as well as an unknown one. The tier on
+    /// a withheld row exists for the recommender, not as an energy claim, so
+    /// handing out its coefficients would print the number the row withholds.
     func tier(for model: String) -> TierCoefficients? {
-        guard let t = tierByModel[model] else { return nil }
-        return tiers[t]
+        guard let e = entry(for: model), e.basis != "withheld" else { return nil }
+        return tiers[e.tier]
     }
 
     func entry(for model: String) -> ModelEntry? { models.first { $0.id == model } }
@@ -89,6 +90,16 @@ struct PricingModel: Decodable, Sendable {
         let write1h: Double
     }
 
+    /// Multipliers applied when a request crosses a model-specific prompt
+    /// length threshold. OpenAI applies GPT-6 Astra's surcharge to the whole
+    /// request, not just the tokens above the threshold.
+    struct LongContextPricing: Decodable, Sendable {
+        let threshold: Int
+        let input: Double
+        let cache: Double
+        let output: Double
+    }
+
     struct Price: Decodable, Sendable {
         let id: String
         let provider: Provider
@@ -102,6 +113,7 @@ struct PricingModel: Decodable, Sendable {
         /// writes at GPT-5.6 having charged nothing at 5.5, so the terms are a
         /// property of the model, not just the vendor.
         var cache: CacheMultipliers?
+        var longContext: LongContextPricing?
     }
 
     struct UnknownModels: Decodable, Sendable {
