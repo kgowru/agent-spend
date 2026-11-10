@@ -165,9 +165,25 @@ def energy_wh(row, energy, tiers, bound="v", read_factor=None):
             + row["output"] * e_out) / 1000.0
 
 
-def cost_usd(row, prices, mult):
+def cost_usd(row, prices, cache_multipliers):
+    """USD for one row, mirroring Estimator.cost in the Swift app.
+
+    `cache_multipliers` is the provider-keyed `cacheMultipliers` block, and a
+    model's own `cache` block wins over its vendor's default. Both halves
+    matter: Anthropic and OpenAI disagree on what a cache write costs, and
+    neither vendor is internally uniform — Fable 5.1 and Mythos 5.1 read at
+    0.025x and Opus 5.5 at 0.05x against the 0.1x house rate, while OpenAI
+    began charging for writes at GPT-5.6 having charged nothing at 5.5.
+
+    Returns None on an unknown model or a provider with no terms, so callers
+    surface it rather than coercing a silent $0 — the failure mode
+    Resources/README.md forbids.
+    """
     p = prices.get(row["model"])
     if p is None:
+        return None
+    mult = p.get("cache") or cache_multipliers.get(p["provider"])
+    if mult is None:
         return None
     # Split the write by TTL when the breakdown is present; the 1h premium is
     # 2x vs 1.25x, which is a real difference in Claude Code's usage pattern.
